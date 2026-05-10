@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlowTrack - Control de Inventario Inteligente</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap');
+  /* Open Sauce (Fontshare CDN) */
+  @import url('https://api.fontshare.com/v2/css?f[]=open-sauce-sans@400,500,600,700&display=swap');
+
+  :root {
+    --primary: #FFA22A;
+    --primary-dark: #e6901f;
+    --primary-light: #FFC64D;
+    --bg: #FFFFFF;
+    --bg2: #fff9ef;
+    --bg3: #fff4e2;
+    --card: #FFFFFF;
+    --card2: #fff8ec;
+    --border: #f0dfc4;
+    --text: #333333;
+    --text2: #5c5c5c;
+    --text3: #7b7b7b;
+    --green: #2ECC71;
+    --red: #ef4444;
+    --yellow: #FFC64D;
+    --cyan: #ffa22a;
+    --font-display: "Open Sauce Sans", "Open Sauce One", "Roboto", "Segoe UI", system-ui, sans-serif;
+    --font-body: "Roboto", "Segoe UI", system-ui, sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body { font-family:var(--font-body); background:var(--bg); color:var(--text); line-height:1.6; }
+  h1,h2,h3 { font-family:var(--font-display); }
+  /* Guideline hierarchy: H1 48px bold; H2 32px semibold; P 16px regular; labels/notes 12px */
+  h1 { font-size:48px; font-weight:700; line-height:1.15; letter-spacing:.5px; max-width:800px; margin-bottom:20px; }
+  h2 { font-size:32px; font-weight:600; line-height:1.25; }
+  p { font-size:16px; line-height:1.55; font-weight:400; }
+
+  /* NAV */
+  nav {
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 5%; height:64px;
+    background:rgba(255,255,255,0.95); backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border);
+  }
+  .nav-logo {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    font-size:1.25rem;
+    font-weight:700;
+    color:var(--text);
+    text-decoration:none;
+    line-height:1;
+  }
+  .nav-logo span { color:var(--primary-light); }
+  /* Logo PNG: mostrar completo (no recortar como avatar) */
+  .nav-logo-img{
+    height:40px;
+    width:auto;
+    max-width:min(200px, 42vw);
+    object-fit:contain;
+    object-position:left center;
+    flex-shrink:0;
+    border-radius:0;
+    border:none;
+    box-shadow:none;
+    vertical-align:middle;
+  }
+  .footer-logo .nav-logo-img{
+    height:34px;
+    max-width:180px;
+  }
+  .nav-logo,
+  .footer-logo { font-family:var(--font-display); font-weight:700; letter-spacing:.5px; text-transform:uppercase; }
+  .brand-mark {
+    width:14px;
+    height:14px;
+    border-radius:4px;
+    background:linear-gradient(135deg,var(--primary),var(--yellow));
+    display:inline-block;
+    box-shadow:0 6px 14px rgba(255,162,42,.25);
+  }
+  .nav-links { display:flex; gap:2rem; list-style:none; }
+  .nav-links a { color:var(--text2); text-decoration:none; font-size:.9rem; transition:color .2s; }
+  .nav-links a:hover { color:var(--text); }
+  .nav-cta { display:flex; gap:10px; align-items:center; }
+  .btn-ghost { background:transparent; border:1px solid var(--border); color:var(--text2); padding:8px 18px; border-radius:8px; cursor:pointer; font-size:.9rem; transition:all .2s; text-decoration:none; }
+  .btn-ghost:hover { border-color:var(--primary); color:var(--text); }
+  .btn-primary { background:var(--primary); color:#fff; padding:8px 18px; border-radius:8px; cursor:pointer; font-size:.9rem; font-weight:600; border:none; transition:all .2s; text-decoration:none; }
+  .btn-primary:hover { background:var(--primary-dark); transform:translateY(-1px); }
+
+  /* HERO */
+  .hero {
+    min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:80px 5% 60px; text-align:center;
+    background:radial-gradient(ellipse 80% 60% at 50% 20%, rgba(255,198,77,.35) 0%, transparent 70%);
+  }
+  .badge { display:inline-flex; align-items:center; gap:8px; background:rgba(255,162,42,.12); border:1px solid rgba(255,162,42,.35); border-radius:999px; padding:6px 16px; font-size:12px; color:#9b5d06; margin-bottom:24px; }
+  .badge .dot { width:6px; height:6px; background:var(--primary-light); border-radius:50%; animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  h1 span { background:linear-gradient(135deg,var(--primary),var(--yellow)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .hero-sub { font-size:1.1rem; color:var(--text2); max-width:600px; margin-bottom:36px; }
+  .hero-btns { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-bottom:16px; }
+  .hero-note { font-size:12px; color:var(--text3); }
+  .hero-note span { color:var(--green); }
+
+  /* DASHBOARD MOCKUP */
+  .dashboard-wrap { width:100%; max-width:900px; margin:50px auto 0; position:relative; }
+  .dashboard-glow { position:absolute; inset:-30px; background:radial-gradient(ellipse at 50% 50%,rgba(255,162,42,.28) 0%,transparent 70%); pointer-events:none; }
+  .dashboard { background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+  .db-header { background:var(--bg3); padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+  .db-dot { width:10px; height:10px; border-radius:50%; }
+  .db-title { flex:1; text-align:center; font-size:.85rem; color:var(--text2); }
+  .db-body { padding:20px; }
+  .db-greeting { font-size:1rem; font-weight:600; margin-bottom:4px; }
+  .db-sub { font-size:.8rem; color:var(--text2); margin-bottom:16px; }
+  .db-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
+  .stat-card { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:14px; }
+  .stat-label { font-size:.72rem; color:var(--text2); margin-bottom:6px; }
+  .stat-num { font-size:1.6rem; font-weight:700; }
+  .stat-date { font-size:.68rem; color:var(--text3); margin-top:2px; }
+  .db-bottom { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .db-products { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:14px; }
+  .db-products h4 { font-size:.78rem; font-weight:600; margin-bottom:10px; }
+  .prod-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .prod-bar-wrap { flex:1; height:6px; background:var(--border); border-radius:99px; }
+  .prod-bar { height:100%; border-radius:99px; background:var(--primary); }
+  .prod-name { font-size:.72rem; color:var(--text2); min-width:90px; }
+  .prod-pct { font-size:.72rem; color:var(--text2); min-width:30px; text-align:right; }
+  .db-alerts { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:8px; }
+  .alert-item { display:flex; align-items:center; gap:10px; }
+  .alert-num { font-size:1.4rem; font-weight:700; }
+  .alert-desc { font-size:.72rem; color:var(--text2); }
+
+  /* Wireframe dashboard (hero illustration) */
+  .wf-shell {
+    position:relative;
+    background:rgba(255,255,255,.92);
+    border:1px solid rgba(17,24,39,.55);
+    border-radius:26px;
+    overflow:hidden;
+    box-shadow: 0 26px 55px rgba(31,36,48,.14);
+  }
+  .wf-topbar{
+    height:44px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:0 16px;
+    background:rgba(255,255,255,.94);
+    border-bottom:1px solid rgba(0,0,0,.08);
+    backdrop-filter: blur(10px);
+  }
+  .wf-dot{ width:10px; height:10px; border-radius:50%; }
+  .wf-dot.red{ background:#ef4444; }
+  .wf-dot.yellow{ background:#f59e0b; }
+  .wf-dot.green{ background:#22c55e; }
+  .wf-topbar-title{
+    margin-left:10px;
+    font-size:12px;
+    color:var(--text3);
+    font-weight:600;
+    flex:1;
+    text-align:center;
+  }
+  .wf-grid { display:grid; grid-template-columns:72px 1fr; min-height:340px; }
+  .wf-sidebar {
+    background: linear-gradient(
+      180deg,
+      rgba(255,231,184,.92) 0%,
+      rgba(255,198,77,.72) 42%,
+      rgba(255,162,42,.58) 100%
+    );
+    display:flex; flex-direction:column; align-items:center;
+    padding:18px 10px; gap:14px;
+    border-right:1px solid rgba(0,0,0,.08);
+    box-shadow: inset -1px 0 0 rgba(255,255,255,.35);
+    position: relative;
+  }
+  .wf-sidebar::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0));
+    opacity:.9;
+  }
+  .wf-sidebar > * { position: relative; z-index: 1; }
+  .wf-sicon {
+    width:40px;
+    height:40px;
+    border-radius:999px;
+    background: rgba(255,255,255,.86);
+    border: 1px solid rgba(0,0,0,.06);
+    box-shadow: 0 14px 22px rgba(31,36,48,.10);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color: rgba(0,0,0,.58);
+    transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+  }
+  .wf-sicon:hover{
+    transform: translateY(-1px);
+    background: rgba(255,255,255,.86);
+    box-shadow: 0 14px 22px rgba(31,36,48,.10);
+  }
+  .wf-sicon svg{
+    width:18px;
+    height:18px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .wf-main { padding:20px 24px 20px; background:rgba(255,255,255,.94); }
+  .wf-topline { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:14px; }
+  .wf-title { font-weight:700; font-size:15px; }
+  .wf-sub { color:var(--text3); font-size:12px; margin-top:2px; }
+  .wf-kpis { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; margin-bottom:14px; }
+  .wf-kpi {
+    background:#fff;
+    border:1px solid rgba(0,0,0,.08);
+    border-radius:16px;
+    padding:12px 12px;
+    box-shadow: 0 10px 22px rgba(31,36,48,.06);
+  }
+  .wf-kpi .l { font-size:11px; color:var(--text3); margin-bottom:6px; }
+  .wf-kpi .n { font-size:18px; font-weight:800; color:var(--text); line-height:1.1; }
+  .wf-kpi .d { font-size:11px; color:var(--text3); margin-top:4px; }
+  .wf-kpi .chip {
+    width:18px; height:18px; border-radius:6px;
+    background: rgba(255,162,42,.25);
+    border: 1px solid rgba(255,162,42,.25);
+    float:right;
+    margin-top:-2px;
+  }
+  .wf-mid {
+    background:#fff;
+    border:1px solid rgba(0,0,0,.08);
+    border-radius:18px;
+    padding:16px 16px;
+    box-shadow: 0 10px 22px rgba(31,36,48,.06);
+    min-height:170px;
+    display:flex;
+    gap:18px;
+    align-items:center;
+  }
+  .wf-mid h4 { font-size:12px; font-weight:700; margin-bottom:6px; }
+  .wf-donut {
+    width:110px; height:110px; border-radius:999px;
+    background: conic-gradient(var(--primary-light) 0 30%, rgba(255,162,42,.22) 30% 60%, rgba(46,204,113,.22) 60% 100%);
+    position:relative;
+    box-shadow: inset 0 0 0 14px rgba(255,255,255,.92);
+    border:1px solid rgba(0,0,0,.06);
+  }
+  .wf-bars { flex:1; display:flex; align-items:flex-end; gap:7px; height:92px; margin-top:18px; }
+  .wf-bar { width:100%; border-radius:10px 10px 4px 4px; background: rgba(255,162,42,.22); border:1px solid rgba(255,162,42,.16); }
+  .wf-bar.b1{ height:32%; }
+  .wf-bar.b2{ height:46%; }
+  .wf-bar.b3{ height:68%; background: rgba(255,198,77,.35); }
+  .wf-bar.b4{ height:80%; background: rgba(255,162,42,.35); }
+  .wf-bar.b5{ height:55%; }
+
+  .wf-toast {
+    position:absolute;
+    background: rgba(255,255,255,.86);
+    border-radius:16px;
+    border:1px solid rgba(0,0,0,.06);
+    box-shadow: 0 18px 34px rgba(31,36,48,.12);
+    backdrop-filter: blur(10px);
+    padding:12px 14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:210px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transform: translateZ(0);
+    transition: transform .22s ease, box-shadow .22s ease, filter .22s ease;
+  }
+  .wf-toast .icon {
+    width:34px; height:34px; border-radius:999px;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid rgba(0,0,0,.08);
+    font-weight:900;
+    font-size:12px;
+  }
+  .wf-toast .tmain { font-weight:800; font-size:16px; line-height:1; }
+  .wf-toast .tlabel { font-size:11px; color:var(--text3); margin-top:3px; }
+  .wf-toast .dots { margin-left:auto; width:4px; height:18px; position:relative; }
+  .wf-toast .dots::before, .wf-toast .dots::after {
+    content:""; position:absolute; left:0; width:4px; height:4px; border-radius:999px; background:#d6cdbf;
+  }
+  .wf-toast .dots::before { top:0; }
+  .wf-toast .dots::after { bottom:0; }
+
+  .wf-toast.risk { background: rgba(255, 235, 235, .78); }
+  .wf-toast.risk .icon { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.22); color: var(--red); }
+  .wf-toast.warn { background: rgba(255, 244, 226, .82); }
+  .wf-toast.warn .icon { background: rgba(255,162,42,.14); border-color: rgba(255,162,42,.22); color: var(--primary-dark); }
+  .wf-toast.ok { background: rgba(232, 255, 242, .82); }
+  .wf-toast.ok .icon { background: rgba(46,204,113,.12); border-color: rgba(46,204,113,.22); color: var(--green); }
+
+  .wf-toast:hover{
+    transform: translateY(-4px) rotate(-.35deg) scale(1.01);
+    box-shadow: 0 24px 46px rgba(31,36,48,.16);
+    filter: saturate(1.05);
+  }
+  .wf-toast:active{
+    transform: translateY(-1px) scale(.99);
+  }
+  .wf-toast.is-tapped{
+    animation: toastPop .42s ease;
+  }
+  @keyframes toastPop{
+    0% { transform: translateY(0) scale(1); }
+    40% { transform: translateY(-6px) scale(1.02); }
+    100% { transform: translateY(0) scale(1); }
+  }
+
+  @media(max-width:768px) {
+    .wf-kpis { grid-template-columns:1fr; }
+    .wf-grid { grid-template-columns:64px 1fr; }
+  }
+  @media(max-width:520px) {
+    .wf-mid { flex-direction:column; align-items:flex-start; }
+    .wf-donut { width:96px; height:96px; }
+    .wf-toast { display:none; }
+  }
+
+  .wf-toast-anchor{
+    position:absolute;
+    pointer-events:none;
+  }
+  .wf-toast-anchor > .wf-toast{ pointer-events:auto; }
+  .wf-toast-anchor.center{ left:50%; transform:translateX(-50%); }
+
+  /* YOLO SECTION */
+  .yolo-section { padding:80px 5%; background:var(--bg2); }
+  .yolo-inner { max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center; }
+  .yolo-badge { display:inline-flex; align-items:center; gap:6px; background:rgba(255,162,42,.12); border:1px solid rgba(255,162,42,.3); color:#a86400; border-radius:999px; padding:4px 12px; font-size:12px; margin-bottom:16px; }
+  .yolo-inner h2 { font-size:1.8rem; font-weight:700; margin-bottom:14px; line-height:1.3; }
+  .yolo-inner p { color:var(--text2); font-size:.95rem; margin-bottom:20px; }
+  .yolo-features { display:flex; flex-direction:column; gap:12px; }
+  .yolo-feat { display:flex; gap:12px; align-items:flex-start; }
+  .yolo-icon { width:36px; height:36px; border-radius:10px; background:rgba(255,162,42,.12); border:1px solid rgba(255,162,42,.3); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:.85rem; font-weight:800; color:#9b5d06; }
+  .yolo-feat-text h4 { font-size:.9rem; font-weight:600; margin-bottom:2px; }
+  .yolo-feat-text p { font-size:.8rem; color:var(--text2); }
+  /* YOLO camera mockup */
+  .yolo-visual { background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+  .yolo-cam-header { background:var(--bg3); padding:10px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; font-size:.78rem; color:var(--text2); }
+  .rec-dot { width:8px; height:8px; background:#ef4444; border-radius:50%; animation:pulse 1.5s infinite; }
+  .yolo-cam-body { padding:14px; }
+  .cam-frame { width:100%; aspect-ratio:16/9; background:#fff7ea; border-radius:10px; border:1px solid var(--border); position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+  .cam-grid { position:absolute; inset:0; background-image:linear-gradient(rgba(255,162,42,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(255,162,42,.10) 1px,transparent 1px); background-size:30px 30px; }
+  .detection-box { position:absolute; border:2px solid var(--cyan); border-radius:4px; }
+  .detection-box .det-label { position:absolute; top:-20px; left:0; background:var(--cyan); color:#000; font-size:.6rem; font-weight:700; padding:1px 5px; border-radius:3px; white-space:nowrap; }
+  .box1 { width:22%; height:30%; top:25%; left:15%; }
+  .box2 { width:18%; height:28%; top:22%; left:43%; border-color:#22c55e; }
+  .box2 .det-label { background:#22c55e; }
+  .box3 { width:20%; height:32%; top:20%; right:12%; border-color:#f59e0b; }
+  .box3 .det-label { background:#f59e0b; }
+  .det-count { position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,.7); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:.72rem; }
+  .det-count span { color:var(--cyan); font-weight:700; }
+  .yolo-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+  .yolo-stat { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:10px; text-align:center; }
+  .yolo-stat .n { font-size:1.3rem; font-weight:700; color:var(--primary-light); }
+  .yolo-stat .l { font-size:.68rem; color:var(--text2); }
+
+  /* FLUJO CLIENTES */
+  .flujo-section { padding:80px 5%; background:var(--bg); }
+  .flujo-inner { max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center; }
+  .flujo-visual { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:20px; }
+  .flujo-visual h4 { font-size:.85rem; font-weight:600; margin-bottom:14px; }
+  .chart-bars { display:flex; align-items:flex-end; gap:6px; height:100px; margin-bottom:10px; }
+  .bar { flex:1; border-radius:4px 4px 0 0; background:var(--primary); opacity:.7; transition:opacity .2s; position:relative; }
+  .bar:hover { opacity:1; }
+  .bar.peak { background:var(--cyan); opacity:1; }
+  .bar-labels { display:flex; gap:6px; }
+  .bar-label { flex:1; text-align:center; font-size:.62rem; color:var(--text3); }
+  .flujo-kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px; }
+  .kpi { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:10px; text-align:center; }
+  .kpi .n { font-size:1.2rem; font-weight:700; }
+  .kpi .l { font-size:.68rem; color:var(--text2); }
+
+  /* FEATURES GRID */
+  .features-section { padding:80px 5%; background:var(--bg2); }
+  .section-header { text-align:center; margin-bottom:50px; }
+  .section-header h2 { font-size:32px; font-weight:700; margin-bottom:10px; }
+  .section-header p { color:var(--text2); font-size:16px; }
+  .features-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; max-width:1100px; margin:0 auto; }
+  .feat-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:24px; transition:transform .2s,border-color .2s; }
+  .feat-card:hover { transform:translateY(-4px); border-color:var(--primary); }
+  .feat-icon {
+    width:40px;
+    height:40px;
+    border-radius:12px;
+    background:rgba(255,162,42,.12);
+    border:1px solid rgba(255,162,42,.3);
+    margin-bottom:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#9b5d06;
+    font-weight:800;
+    font-size:.95rem;
+    letter-spacing:.5px;
+  }
+  .feat-card h3 { font-size:1rem; font-weight:600; margin-bottom:8px; }
+  .feat-card p { font-size:.85rem; color:var(--text2); }
+
+  /* BENEFITS */
+  .benefits-section { padding:80px 5%; }
+  .benefits-inner { max-width:1100px; margin:0 auto; }
+  .benefit-block { display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center; margin-bottom:80px; }
+  .benefit-block.reverse { direction:rtl; }
+  .benefit-block.reverse > * { direction:ltr; }
+  .benefit-tag { display:inline-block; background:rgba(255,162,42,.15); color:#9b5d06; border-radius:999px; padding:4px 12px; font-size:.75rem; margin-bottom:12px; }
+  .benefit-block h2 { font-size:1.6rem; font-weight:700; margin-bottom:12px; }
+  .benefit-block p { color:var(--text2); font-size:.9rem; }
+  .benefit-img { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:24px; min-height:220px; display:flex; flex-direction:column; justify-content:center; gap:12px; }
+
+  /* CTA MIDDLE */
+  .cta-mid { padding:60px 5%; text-align:center; background:linear-gradient(135deg,rgba(255,198,77,.24),rgba(255,162,42,.18)); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+  .cta-mid h2 { font-size:1.8rem; font-weight:700; margin-bottom:10px; }
+  .cta-mid p { color:var(--text2); margin-bottom:24px; }
+
+  /* ABOUT (PRODUCT / TEAM) */
+  .about-section { padding:80px 5%; background:var(--bg); }
+  .about-section.alt { background:var(--bg2); }
+  .about-inner { max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center; }
+  .about-badge { display:inline-flex; align-items:center; gap:6px; background:rgba(255,162,42,.12); border:1px solid rgba(255,162,42,.3); color:#a86400; border-radius:999px; padding:4px 12px; font-size:.75rem; margin-bottom:16px; }
+  .about-inner h2 { font-size:1.8rem; font-weight:700; margin-bottom:14px; line-height:1.3; }
+  .about-inner p { color:var(--text2); font-size:.95rem; margin-bottom:16px; }
+  .video-card { background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+  .video-card-header { background:var(--bg3); padding:10px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; font-size:.78rem; color:var(--text2); }
+  .video-card-body { padding:14px; }
+  .about-video { width:100%; aspect-ratio:16/9; display:block; border-radius:12px; background:#000; border:1px solid var(--border); }
+  .video-caption { font-size:.78rem; color:var(--text3); margin-top:10px; }
+
+  /* Testimonials */
+  .testimonials-section{
+    padding:80px 5%;
+    background: radial-gradient(circle at top, rgba(255,231,184,.65), rgba(255,249,239,.9) 45%, rgba(255,255,255,0) 100%);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .testimonials-inner{ max-width:1100px; margin:0 auto; }
+  .testimonials-title{ text-align:center; margin-bottom:34px; }
+  .testimonials-title h2{
+    font-size:32px;
+    font-weight:800;
+    color:var(--text);
+  }
+  .testimonials-title h2 span{
+    background:linear-gradient(135deg,var(--primary),var(--yellow));
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+  }
+  .testimonials-grid{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:18px; }
+  .t-card{
+    background: rgba(255,255,255,.92);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:18px;
+    box-shadow: 0 18px 34px rgba(31,36,48,.08);
+    backdrop-filter: blur(10px);
+    display:flex;
+    flex-direction:column;
+    min-height:160px;
+  }
+  .t-head{ display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+  .t-avatar{
+    width:38px; height:38px; border-radius:999px;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid rgba(255,162,42,.25);
+    color: rgba(155,93,6,.95);
+    background: rgba(255,162,42,.12);
+  }
+  .t-avatar.a2{ color: rgba(0,0,0,.55); background: rgba(255,198,77,.14); border-color: rgba(255,198,77,.25); }
+  .t-avatar.a3{ color: rgba(0,0,0,.55); background: rgba(255,162,42,.10); border-color: rgba(255,162,42,.20); }
+  .t-avatar svg{
+    width:18px; height:18px;
+    stroke: currentColor; stroke-width:2; fill:none;
+    stroke-linecap:round; stroke-linejoin:round;
+  }
+  .t-avatar img{
+    width:100%;
+    height:100%;
+    border-radius:999px;
+    object-fit:cover;
+    display:block;
+  }
+  .t-name{ font-weight:800; font-size:13px; }
+  .t-role{ font-size:11px; color:var(--text3); margin-top:2px; }
+  .t-quote{ font-size:12px; color:var(--text2); line-height:1.55; margin-top:6px; }
+
+  /* Motion */
+  @media (prefers-reduced-motion: reduce) {
+    * { animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+  }
+
+  .lift {
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+    will-change: transform;
+  }
+  .lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 28px rgba(31,36,48,.10);
+    border-color: rgba(255,162,42,.55);
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity .7s ease, transform .7s ease;
+  }
+  .reveal.in {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer::after {
+    content:"";
+    position:absolute;
+    inset:-120% -40%;
+    background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.55) 50%, transparent 65%);
+    transform: translateX(-60%);
+    transition: transform .9s ease;
+    pointer-events:none;
+  }
+  .shimmer:hover::after { transform: translateX(60%); }
+
+  .bg-blobs { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+  .blob {
+    position:absolute;
+    width:420px;
+    height:420px;
+    border-radius:999px;
+    filter: blur(30px);
+    opacity:.35;
+    background: radial-gradient(circle at 30% 30%, rgba(255,198,77,.85), rgba(255,162,42,.25));
+    animation: blobMove 12s ease-in-out infinite;
+  }
+  .blob.b2 {
+    width:360px;
+    height:360px;
+    opacity:.25;
+    background: radial-gradient(circle at 30% 30%, rgba(46,204,113,.35), rgba(255,198,77,.20));
+    animation-duration: 14s;
+  }
+  @keyframes blobMove {
+    0%,100% { transform: translate(-10%, -8%) scale(1); }
+    50% { transform: translate(8%, 10%) scale(1.06); }
+  }
+
+  /* PRICING */
+  .pricing-section { padding:80px 5%; background:var(--bg2); }
+  .pricing-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; max-width:1000px; margin:0 auto; }
+  .pricing-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:28px; position:relative; }
+  .pricing-card.popular { border-color:var(--primary); }
+  .popular-badge { position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:var(--primary); color:#fff; font-size:.72rem; font-weight:700; padding:3px 14px; border-radius:999px; white-space:nowrap; }
+  .price-name { font-size:.9rem; color:var(--text2); margin-bottom:8px; }
+  .price-amount { font-size:2.2rem; font-weight:800; margin-bottom:4px; }
+  .price-amount sup { font-size:1rem; vertical-align:super; }
+  .price-period { font-size:.8rem; color:var(--text2); margin-bottom:20px; }
+  .price-btn { width:100%; padding:10px; border-radius:8px; font-size:.9rem; font-weight:600; cursor:pointer; text-align:center; display:block; text-decoration:none; margin-bottom:20px; transition:all .2s; }
+  .price-list { list-style:none; display:flex; flex-direction:column; gap:10px; }
+  .price-list li { display:flex; gap:8px; font-size:.83rem; color:var(--text2); }
+  .price-list li.on { color:var(--text); }
+  .check { color:var(--green); font-weight:700; }
+  .cross { color:var(--text3); }
+
+  /* FAQ */
+  .faq-section { padding:80px 5%; background:var(--bg); }
+  .faq-list { max-width:700px; margin:0 auto; display:flex; flex-direction:column; gap:12px; }
+  .faq-item { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .faq-q { padding:18px 20px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; font-size:.95rem; font-weight:500; }
+  .faq-q .arrow { transition:transform .3s; }
+  .faq-item.open .faq-q .arrow { transform:rotate(180deg); }
+  .faq-a { max-height:0; overflow:hidden; transition:max-height .3s ease; }
+  .faq-item.open .faq-a { max-height:300px; }
+  .faq-a-inner { padding:0 20px 18px; color:var(--text2); font-size:.88rem; border-top:1px solid var(--border); padding-top:14px; }
+
+  /* FOOTER */
+  footer { background:var(--bg2); border-top:1px solid var(--border); padding:40px 5%; }
+  .footer-inner { max-width:1100px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px; }
+  .footer-logo { font-size:1.1rem; font-weight:700; }
+  .footer-logo span { color:var(--primary-light); }
+  .footer-tagline { font-size:.82rem; color:var(--text2); margin-top:4px; }
+  .footer-copy { font-size:.8rem; color:var(--text3); }
+
+  /* TOGGLE */
+  .toggle-wrap {
+    position:relative;
+    display:flex;
+    gap:0;
+    background:rgba(255,255,255,.7);
+    border:1px solid rgba(0,0,0,.08);
+    border-radius:999px;
+    overflow:hidden;
+    margin:0 auto 40px;
+    width:min(520px, 92vw);
+    padding:4px;
+    box-shadow: 0 18px 34px rgba(31,36,48,.10);
+    backdrop-filter: blur(10px);
+  }
+  .toggle-wrap::before{
+    content:"";
+    position:absolute;
+    top:4px;
+    bottom:4px;
+    left:4px;
+    width:calc(50% - 4px);
+    border-radius:999px;
+    background: linear-gradient(135deg, var(--primary), var(--yellow));
+    box-shadow: 0 14px 28px rgba(255,162,42,.22);
+    transform: translateX(0);
+    transition: transform .28s cubic-bezier(.2,.9,.2,1);
+  }
+  .toggle-wrap[data-mode="annual"]::before{
+    transform: translateX(100%);
+  }
+  .toggle-btn {
+    position:relative;
+    z-index:1;
+    flex:1;
+    padding:10px 22px;
+    font-size:14px;
+    cursor:pointer;
+    border:none;
+    background:transparent;
+    color:rgba(31,36,48,.72);
+    transition: color .2s ease, transform .2s ease;
+    border-radius:999px;
+    font-weight:700;
+    letter-spacing:.2px;
+    text-align:center;
+  }
+  .toggle-btn:hover{ transform: translateY(-1px); }
+  .toggle-btn.active { color:#fff; }
+
+  /* Strong background option (modern landing feel) */
+  .section-strong {
+    background: radial-gradient(circle at top, rgba(255,231,184,.95), rgba(255,198,77,.92) 45%, rgba(255,162,42,.22) 100%);
+    border-top: 1px solid rgba(0,0,0,.08);
+    border-bottom: 1px solid rgba(0,0,0,.08);
+  }
+  .section-strong .feat-card{
+    background: rgba(255,255,255,.92);
+    border-color: rgba(0,0,0,.10);
+    box-shadow: 0 18px 34px rgba(31,36,48,.10);
+  }
+
+  /* RESPONSIVE */
+  @media(max-width:768px) {
+    .nav-links { display:none; }
+    nav { padding:0 4%; }
+    .nav-cta { gap:8px; }
+    .nav-logo { font-size:1.05rem; }
+    .db-stats { grid-template-columns:repeat(3,1fr); }
+    .db-bottom { grid-template-columns:1fr; }
+    .yolo-inner,.flujo-inner,.benefit-block { grid-template-columns:1fr; }
+    .about-inner { grid-template-columns:1fr; }
+    h1 { font-size:32px; }
+    h2, .section-header h2 { font-size:24px; }
+    p { font-size:16px; }
+    .benefit-block.reverse { direction:ltr; }
+    .features-grid { grid-template-columns:1fr 1fr; }
+    .pricing-grid { grid-template-columns:1fr; max-width:380px; }
+    .yolo-stats { grid-template-columns:repeat(3,1fr); }
+  }
+
+  @media(max-width:520px) {
+    nav { height:auto; padding:10px 4%; gap:10px; flex-wrap:wrap; }
+    .nav-cta { width:100%; justify-content:flex-end; flex-wrap:wrap; }
+    .btn-ghost, .btn-primary { padding:8px 14px; border-radius:10px; }
+
+    .hero { padding:92px 4% 56px; }
+    .hero-btns { flex-direction:column; align-items:stretch; width:100%; max-width:360px; margin-left:auto; margin-right:auto; }
+    .hero-btns a { width:100%; text-align:center; }
+
+    .dashboard-wrap { margin-top:34px; }
+    .db-stats { grid-template-columns:1fr; }
+    .stat-num { font-size:1.45rem; }
+
+    .features-section,
+    .yolo-section,
+    .flujo-section,
+    .benefits-section,
+    .about-section,
+    .pricing-section,
+    .faq-section { padding:64px 4%; }
+
+    .features-grid { grid-template-columns:1fr; }
+    .yolo-stats { grid-template-columns:1fr; }
+    .flujo-kpis { grid-template-columns:1fr; }
+
+    .cta-mid { padding:50px 4%; }
+    .cta-mid a { width:100%; max-width:360px; }
+
+    .footer-inner { flex-direction:column; align-items:flex-start; }
+    .testimonials-section { padding:64px 4%; }
+    .testimonials-grid { grid-template-columns:1fr; }
+  }
+
+  @media(max-width:380px) {
+    h1 { font-size:28px; }
+    h2, .section-header h2 { font-size:22px; }
+    .badge { padding:6px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo"><img class="nav-logo-img" src="assets/logoStockTrack.png" alt="StockTrack logo"> Flow<span>Track</span></a>
+  <ul class="nav-links">
+    <li><a href="#caracteristicas">Características</a></li>
+    <li><a href="#yolo">YOLO Vision</a></li>
+    <li><a href="#afluencia">Afluencia</a></li>
+    <li><a href="#producto">Producto</a></li>
+    <li><a href="#equipo">Equipo</a></li>
+    <li><a href="#planes">Planes</a></li>
+    <li><a href="#faq">FAQ</a></li>
+  </ul>
+  <div class="nav-cta">
+    <button class="btn-ghost" id="lang-toggle" type="button" aria-label="Cambiar idioma">ES</button>
+    <a href="#" class="btn-ghost">Iniciar Sesión</a>
+    <a href="#" class="btn-primary">Prueba Gratis</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="bg-blobs" aria-hidden="true">
+    <div class="blob" style="top:-160px;left:-140px"></div>
+    <div class="blob b2" style="bottom:-180px;right:-140px"></div>
+  </div>
+  <div class="badge"><span class="dot"></span> <span data-i18n="hero.badge">Potenciado con IA · Ultralytics YOLO</span></div>
+  <h1 data-i18n="hero.title">Controla tu inventario,<br><span>sin errores ni sorpresas</span></h1>
+  <p class="hero-sub" data-i18n="hero.sub">Diseñado para dueños de bodegas y emprendedores que buscan reducir pérdidas, evitar quiebres de stock y tomar decisiones con datos confiables.</p>
+  <div class="hero-btns">
+    <a href="#" class="btn-primary shimmer" style="padding:12px 28px;font-size:1rem;" data-i18n="hero.ctaPrimary">Prueba FlowTrack gratis</a>
+    <a href="#yolo" class="btn-ghost" style="padding:12px 28px;font-size:1rem;" data-i18n="hero.ctaSecondary">Ver tecnología YOLO</a>
+  </div>
+  <p class="hero-note" data-i18n="hero.note"><span>✓</span> 14 días gratis &nbsp;·&nbsp; <span>✓</span> No necesitas tarjeta</p>
+
+  <!-- DASHBOARD MOCKUP -->
+  <div class="dashboard-wrap">
+    <div class="dashboard-glow"></div>
+    <div class="wf-shell reveal lift">
+      <div class="wf-topbar" aria-hidden="true">
+        <div class="wf-dot red"></div>
+        <div class="wf-dot yellow"></div>
+        <div class="wf-dot green"></div>
+        <div class="wf-topbar-title" data-i18n="wf.topbarTitle">FlowTrack — Panel</div>
+      </div>
+      <div class="wf-grid">
+        <aside class="wf-sidebar" aria-hidden="true">
+          <div class="wf-sicon" title="Inicio">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"></path><path d="M6.5 10.5V20h11V10.5"></path></svg>
+          </div>
+          <div class="wf-sicon" title="Productos">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10H7z"></path><path d="M7 7l5-3 5 3"></path><path d="M12 4v3"></path></svg>
+          </div>
+          <div class="wf-sicon" title="Usuarios">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z"></path><path d="M4.5 20a7.5 7.5 0 0 1 15 0"></path></svg>
+          </div>
+          <div class="wf-sicon" title="Analítica">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V10"></path><path d="M12 19V5"></path><path d="M19 19v-8"></path></svg>
+          </div>
+          <div class="wf-sicon" title="Ajustes">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0-3.5-3.5 3.5 3.5 0 0 0 3.5 3.5Z"></path><path d="M19.4 15a7.7 7.7 0 0 0 .1-6l-2.1.6a6 6 0 0 0-1.2-1.2l.6-2.1a7.7 7.7 0 0 0-6-.1l.6 2.1a6 6 0 0 0-1.2 1.2L6 7.9a7.7 7.7 0 0 0-.1 6l2.1-.6a6 6 0 0 0 1.2 1.2l-.6 2.1a7.7 7.7 0 0 0 6 .1l-.6-2.1a6 6 0 0 0 1.2-1.2Z"></path></svg>
+          </div>
+        </aside>
+        <div class="wf-main">
+          <div class="wf-topline">
+            <div>
+              <div class="wf-title" data-i18n="wf.userTitle">Usuario</div>
+              <div class="wf-sub" data-i18n="wf.userSub">Resumen de tu inventario</div>
+            </div>
+            <div class="wf-sub" data-i18n="wf.noCard">No necesitas tarjeta</div>
+          </div>
+
+          <div class="wf-kpis">
+            <div class="wf-kpi">
+              <span class="chip" aria-hidden="true"></span>
+              <div class="l" data-i18n="wf.kpi.inventory">Productos en inventario</div>
+              <div class="n">1,247</div>
+              <div class="d" data-i18n="wf.kpi.date">Enero 25, 2026</div>
+            </div>
+            <div class="wf-kpi">
+              <span class="chip" aria-hidden="true"></span>
+              <div class="l" data-i18n="wf.kpi.categories">Categorías activas</div>
+              <div class="n">24</div>
+              <div class="d" data-i18n="wf.kpi.date">Enero 25, 2026</div>
+            </div>
+            <div class="wf-kpi">
+              <span class="chip" aria-hidden="true"></span>
+              <div class="l" data-i18n="wf.kpi.alerts">Productos con alertas</div>
+              <div class="n">12</div>
+              <div class="d" data-i18n="wf.kpi.date">Enero 25, 2026</div>
+            </div>
+          </div>
+
+          <div class="wf-mid">
+            <div style="min-width:170px">
+              <h4 data-i18n="wf.mid.title">Productos más rotativos</h4>
+              <div class="wf-sub" data-i18n="wf.mid.sub">Vista rápida del rendimiento</div>
+              <div style="height:10px"></div>
+              <div class="wf-donut" aria-hidden="true"></div>
+            </div>
+            <div style="flex:1; width:100%">
+              <div class="wf-bars" aria-hidden="true">
+                <div class="wf-bar b1"></div>
+                <div class="wf-bar b2"></div>
+                <div class="wf-bar b3"></div>
+                <div class="wf-bar b4"></div>
+                <div class="wf-bar b5"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wf-toast risk" style="top:64px; left:64px">
+        <div class="icon">!</div>
+        <div>
+          <div class="tmain">3</div>
+          <div class="tlabel" data-i18n="wf.toast.risk">Productos en riesgo</div>
+        </div>
+        <div class="dots" aria-hidden="true"></div>
+      </div>
+
+      <div class="wf-toast warn" style="top:164px; right:34px">
+        <div class="icon">□</div>
+        <div>
+          <div class="tmain">12</div>
+          <div class="tlabel" data-i18n="wf.toast.warn">Productos con alerta</div>
+        </div>
+        <div class="dots" aria-hidden="true"></div>
+      </div>
+
+      <div class="wf-toast-anchor center" style="bottom:78px">
+        <div class="wf-toast ok">
+          <div class="icon">✓</div>
+          <div>
+            <div class="tmain">20</div>
+            <div class="tlabel" data-i18n="wf.toast.ok">Días disponibles</div>
+          </div>
+          <div class="dots" aria-hidden="true"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section section-strong" id="caracteristicas">
+  <div class="section-header">
+    <h2 data-i18n="features.title">Todo lo que necesitas para tener tu inventario bajo control</h2>
+    <p data-i18n="features.sub">Una plataforma SaaS completa, diseñada para el canal tradicional peruano.</p>
+  </div>
+  <div class="features-grid">
+    <div class="feat-card reveal lift">
+      <div class="feat-icon" aria-hidden="true">ST</div>
+      <h3 data-i18n="feat.1.t">Inventario en Tiempo Real</h3>
+      <p data-i18n="feat.1.p">Conoce tus niveles de stock al instante, desde cualquier lugar y en cualquier dispositivo.</p>
+    </div>
+    <div class="feat-card reveal lift">
+      <div class="feat-icon" aria-hidden="true">HI</div>
+      <h3 data-i18n="feat.2.t">Historial de Movimientos</h3>
+      <p data-i18n="feat.2.p">Rastrea cada entrada, salida o ajuste. Ten una trazabilidad completa de tu inventario.</p>
+    </div>
+    <div class="feat-card reveal lift">
+      <div class="feat-icon" aria-hidden="true">RP</div>
+      <h3 data-i18n="feat.3.t">Reportes Visuales</h3>
+      <p data-i18n="feat.3.p">Entiende qué productos son los más rentables con reportes claros y fáciles de interpretar.</p>
+    </div>
+    <div class="feat-card reveal lift">
+      <div class="feat-icon" aria-hidden="true">AL</div>
+      <h3 data-i18n="feat.4.t">Alertas Automáticas</h3>
+      <p data-i18n="feat.4.p">Recibe notificaciones de stock bajo y productos por vencer antes de que se conviertan en un problema.</p>
+    </div>
+    <div class="feat-card reveal lift" style="border-color:rgba(255,162,42,.45)">
+      <div class="feat-icon" aria-hidden="true">AI</div>
+      <h3 data-i18n="feat.5.t">Visión IA con YOLO</h3>
+      <p data-i18n="feat.5.p">Contabiliza productos automáticamente mediante cámaras. Ultralytics YOLO como asistente de reposición.</p>
+    </div>
+    <div class="feat-card reveal lift" style="border-color:rgba(255,162,42,.45)">
+      <div class="feat-icon" aria-hidden="true">FT</div>
+      <h3 data-i18n="feat.6.t">Análisis de Afluencia</h3>
+      <p data-i18n="feat.6.p">Mide el flujo de clientes, horas pico y tasas de conversión integradas con tus datos de ventas.</p>
+    </div>
+    <div class="feat-card reveal lift">
+      <div class="feat-icon" aria-hidden="true">VE</div>
+      <h3 data-i18n="feat.7.t">Control de Vencimientos</h3>
+      <p data-i18n="feat.7.p">Asigna lotes y fechas de vencimiento para reducir pérdidas por productos caducados a cero.</p>
+    </div>
+    <div class="feat-card reveal lift">
+      <div class="feat-icon" aria-hidden="true">SC</div>
+      <h3 data-i18n="feat.8.t">Escaneo de Códigos</h3>
+      <p data-i18n="feat.8.p">Registra movimientos de stock rápidamente mediante lectura de códigos de barras de alta fiabilidad.</p>
+    </div>
+    <div class="feat-card reveal lift">
+      <div class="feat-icon" aria-hidden="true">KT</div>
+      <h3 data-i18n="feat.9.t">Kits y Paquetes</h3>
+      <p data-i18n="feat.9.p">Agrupa productos en paquetes o promociones y el sistema ajustará el stock automáticamente.</p>
+    </div>
+  </div>
+</section>
+
+<!-- YOLO SECTION -->
+<section class="yolo-section" id="yolo">
+  <div class="yolo-inner">
+    <div class="reveal">
+      <div class="yolo-badge" data-i18n="yolo.badge">Ultralytics YOLO · Visión por Computadora</div>
+      <h2 data-i18n="yolo.title">Detección inteligente de productos con IA en tiempo real</h2>
+      <p data-i18n="yolo.sub">FlowTrack incorpora visión por computadora mediante Ultralytics YOLO como asistente inteligente en los procesos de reposición de stock, permitiendo contabilizar productos a través de cámaras para agilizar el registro de ingresos, siempre bajo validación del usuario.</p>
+      <div class="yolo-features">
+        <div class="yolo-feat">
+          <div class="yolo-icon" aria-hidden="true">1</div>
+          <div class="yolo-feat-text">
+            <h4 data-i18n="yolo.f1.t">Detección automática de productos</h4>
+            <p data-i18n="yolo.f1.p">Identifica y contabiliza productos en tiempo real mediante cámaras, acelerando el proceso de recepción de mercadería.</p>
+          </div>
+        </div>
+        <div class="yolo-feat">
+          <div class="yolo-icon" aria-hidden="true">2</div>
+          <div class="yolo-feat-text">
+            <h4 data-i18n="yolo.f2.t">Validación por el usuario</h4>
+            <p data-i18n="yolo.f2.p">El sistema actúa como asistente: propone el conteo automático y el operador confirma, garantizando precisión y control.</p>
+          </div>
+        </div>
+        <div class="yolo-feat">
+          <div class="yolo-icon" aria-hidden="true">3</div>
+          <div class="yolo-feat-text">
+            <h4 data-i18n="yolo.f3.t">Reducción de errores humanos</h4>
+            <p data-i18n="yolo.f3.p">Minimiza los costos operativos derivados del error manual durante los inventarios físicos y la reposición.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="reveal">
+      <div class="yolo-visual lift">
+        <div class="yolo-cam-header">
+          <div class="rec-dot"></div>
+          <span data-i18n="yolo.camTitle">Cámara 01 — Almacén Principal · YOLO v8 activo</span>
+        </div>
+        <div class="yolo-cam-body">
+          <div class="cam-frame">
+            <div class="cam-grid"></div>
+            <div class="detection-box box1"><span class="det-label">Galletas 94%</span></div>
+            <div class="detection-box box2"><span class="det-label">Bebida 97%</span></div>
+            <div class="detection-box box3"><span class="det-label">Pan 89%</span></div>
+            <div class="det-count"><span data-i18n="yolo.detectedPrefix">Detectados:</span> <span>3</span> <span data-i18n="yolo.detectedSuffix">productos</span></div>
+          </div>
+          <div class="yolo-stats">
+            <div class="yolo-stat"><div class="n">98.2%</div><div class="l" data-i18n="yolo.stat.precision">Precisión</div></div>
+            <div class="yolo-stat"><div class="n">30fps</div><div class="l" data-i18n="yolo.stat.speed">Velocidad</div></div>
+            <div class="yolo-stat"><div class="n">847</div><div class="l" data-i18n="yolo.stat.today">Registros hoy</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FLUJO DE CLIENTES -->
+<section class="flujo-section" id="afluencia">
+  <div class="flujo-inner">
+    <div class="reveal">
+      <div class="yolo-visual lift">
+        <div class="yolo-cam-header" style="color:var(--cyan)">
+          <div class="rec-dot"></div>
+          <span data-i18n="flow.camTitle">Análisis de Afluencia · Entrada Principal</span>
+        </div>
+        <div class="yolo-cam-body">
+          <div class="flujo-visual" style="background:transparent;border:none;padding:0">
+            <h4 data-i18n="flow.chartTitle">Clientes por hora — Hoy</h4>
+            <div class="chart-bars">
+              <div class="bar" style="height:20%"></div>
+              <div class="bar" style="height:35%"></div>
+              <div class="bar" style="height:55%"></div>
+              <div class="bar peak" style="height:90%"></div>
+              <div class="bar peak" style="height:95%"></div>
+              <div class="bar" style="height:70%"></div>
+              <div class="bar" style="height:60%"></div>
+              <div class="bar peak" style="height:85%"></div>
+              <div class="bar" style="height:65%"></div>
+              <div class="bar" style="height:40%"></div>
+              <div class="bar" style="height:25%"></div>
+              <div class="bar" style="height:15%"></div>
+            </div>
+            <div class="bar-labels">
+              <span class="bar-label">8h</span>
+              <span class="bar-label">9h</span>
+              <span class="bar-label">10h</span>
+              <span class="bar-label">11h</span>
+              <span class="bar-label">12h</span>
+              <span class="bar-label">13h</span>
+              <span class="bar-label">14h</span>
+              <span class="bar-label">17h</span>
+              <span class="bar-label">18h</span>
+              <span class="bar-label">19h</span>
+              <span class="bar-label">20h</span>
+              <span class="bar-label">21h</span>
+            </div>
+            <div class="flujo-kpis">
+              <div class="kpi"><div class="n" style="color:var(--cyan)">247</div><div class="l" data-i18n="flow.kpi.today">Clientes hoy</div></div>
+              <div class="kpi"><div class="n" style="color:var(--yellow)">12pm</div><div class="l" data-i18n="flow.kpi.peak">Hora pico</div></div>
+              <div class="kpi"><div class="n" style="color:var(--green)">68%</div><div class="l" data-i18n="flow.kpi.conv">Conversión</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="reveal">
+      <div class="yolo-badge" style="background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:var(--green)" data-i18n="flow.badge">Análisis de Afluencia de Clientes</div>
+      <h2 data-i18n="flow.title">Conoce el comportamiento real de tus clientes</h2>
+      <p data-i18n="flow.sub">FlowTrack integra un sistema de análisis de afluencia mediante cámaras en puntos estratégicos, como entradas o zonas de tránsito, permitiendo contabilizar visitantes de forma precisa a lo largo del día.</p>
+      <div class="yolo-features" style="margin-top:20px">
+        <div class="yolo-feat">
+          <div class="yolo-icon" style="background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:var(--green)" aria-hidden="true">1</div>
+          <div class="yolo-feat-text">
+            <h4 data-i18n="flow.f1.t">Métricas clave de clientes</h4>
+            <p data-i18n="flow.f1.p">Número de visitantes por día, horas pico y tasas de conversión para optimizar tu operación.</p>
+          </div>
+        </div>
+        <div class="yolo-feat">
+          <div class="yolo-icon" style="background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:var(--green)" aria-hidden="true">2</div>
+          <div class="yolo-feat-text">
+            <h4 data-i18n="flow.f2.t">Integración con ventas e inventario</h4>
+            <p data-i18n="flow.f2.p">Cruza datos de afluencia con movimientos de stock para una visión completa del rendimiento del negocio.</p>
+          </div>
+        </div>
+        <div class="yolo-feat">
+          <div class="yolo-icon" style="background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:var(--green)" aria-hidden="true">3</div>
+          <div class="yolo-feat-text">
+            <h4 data-i18n="flow.f3.t">Planificación basada en datos reales</h4>
+            <p data-i18n="flow.f3.p">Optimiza horarios, staffing y reposición según los patrones reales de tu bodega.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials-section" id="comentarios">
+  <div class="testimonials-inner">
+    <div class="testimonials-title">
+      <h2><span data-i18n="testimonials.title">Lo que dicen nuestros usuarios</span></h2>
+    </div>
+    <div class="testimonials-grid">
+      <article class="t-card reveal lift">
+        <div class="t-head">
+          <div class="t-avatar" aria-hidden="true">
+            <img src="assets/IMG11.png" alt="Foto de cliente 1">
+          </div>
+          <div>
+            <div class="t-name" data-i18n="testimonials.1.name">Rosa Quispe</div>
+            <div class="t-role" data-i18n="testimonials.1.role">Dueña de bodega</div>
+          </div>
+        </div>
+        <div class="t-quote" data-i18n="testimonials.1.quote">“Con FlowTrack ya no me quedo sin productos clave. Las alertas de stock me avisan a tiempo y ahora repongo con mucha más calma.”</div>
+      </article>
+
+      <article class="t-card reveal lift">
+        <div class="t-head">
+          <div class="t-avatar a2" aria-hidden="true">
+            <img src="assets/IMG22.png" alt="Foto de cliente 2" onerror="this.src='assets/IMG11.png'">
+          </div>
+          <div>
+            <div class="t-name" data-i18n="testimonials.2.name">Carlos Méndez</div>
+            <div class="t-role" data-i18n="testimonials.2.role">Administrador de minimarket</div>
+          </div>
+        </div>
+        <div class="t-quote" data-i18n="testimonials.2.quote">“Antes cerrábamos el día con muchas dudas. Ahora veo entradas, salidas y productos por vencer en un solo panel. Ahorro tiempo todos los días.”</div>
+      </article>
+
+      <article class="t-card reveal lift">
+        <div class="t-head">
+          <div class="t-avatar a3" aria-hidden="true">
+            <img src="assets/IMG33.png" alt="Foto de cliente 3" onerror="this.src='assets/IMG11.png'">
+          </div>
+          <div>
+            <div class="t-name" data-i18n="testimonials.3.name">Sofía Rivas</div>
+            <div class="t-role" data-i18n="testimonials.3.role">Encargada de almacén</div>
+          </div>
+        </div>
+        <div class="t-quote" data-i18n="testimonials.3.quote">“La parte que más valoro es el control de vencimientos. Reducimos pérdidas y siempre sé qué lotes debo mover primero.”</div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- BENEFITS -->
+<section class="benefits-section" id="beneficios">
+  <div class="benefits-inner">
+    <div class="benefit-block">
+      <div>
+        <span class="benefit-tag" data-i18n="benefit.1.tag">Control Total</span>
+        <h2 data-i18n="benefit.1.title">Ten control total con tu inventario en un solo lugar</h2>
+        <p data-i18n="benefit.1.p">Dile adiós al cuaderno y a las hojas de cálculo. Con FlowTrack, centralizas tus productos en una plataforma intuitiva y accesible desde cualquier lugar. Sabrás exactamente qué tienes y dónde está, en tiempo real.</p>
+      </div>
+      <div class="benefit-img">
+        <div style="display:flex;gap:10px;align-items:center;padding:12px;background:var(--bg3);border-radius:10px;border:1px solid var(--border)">
+          <span style="width:12px;height:12px;border-radius:4px;background:var(--primary);display:inline-block" aria-hidden="true"></span>
+          <div><div style="font-size:.85rem;font-weight:600">Coca Cola 2L</div><div style="font-size:.75rem;color:var(--text2)" data-i18n="benefit.mock1">Stock: 48 unidades · Lote A-231</div></div>
+          <span style="margin-left:auto;background:rgba(34,197,94,.15);color:var(--green);font-size:.72rem;padding:3px 8px;border-radius:999px" data-i18n="benefit.chip.ok">✓ OK</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;padding:12px;background:var(--bg3);border-radius:10px;border:1px solid var(--border)">
+          <span style="width:12px;height:12px;border-radius:4px;background:var(--yellow);display:inline-block" aria-hidden="true"></span>
+          <div><div style="font-size:.85rem;font-weight:600">Pan de Molde Grande</div><div style="font-size:.75rem;color:var(--text2)" data-i18n="benefit.mock2">Stock: 4 unidades · Vence: 3 días</div></div>
+          <span style="margin-left:auto;background:rgba(245,158,11,.15);color:var(--yellow);font-size:.72rem;padding:3px 8px;border-radius:999px" data-i18n="benefit.chip.low">⚠ Bajo</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;padding:12px;background:var(--bg3);border-radius:10px;border:1px solid var(--border)">
+          <span style="width:12px;height:12px;border-radius:4px;background:var(--red);display:inline-block" aria-hidden="true"></span>
+          <div><div style="font-size:.85rem;font-weight:600">Chocolate Sublime</div><div style="font-size:.75rem;color:var(--text2)" data-i18n="benefit.mock3">Stock: 0 unidades · ¡Quiebre!</div></div>
+          <span style="margin-left:auto;background:rgba(239,68,68,.15);color:var(--red);font-size:.72rem;padding:3px 8px;border-radius:999px" data-i18n="benefit.chip.crit">✗ Crítico</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="benefit-block reverse">
+      <div>
+        <span class="benefit-tag" data-i18n="benefit.2.tag">Sin Pérdidas</span>
+        <h2 data-i18n="benefit.2.title">Reduce las pérdidas a cero con alertas automáticas</h2>
+        <p data-i18n="benefit.2.p">Deja de perder dinero por productos vencidos o por quedarte sin tu producto más vendido. FlowTrack te notifica cuando un artículo requiere tu atención, para que puedas actuar a tiempo y nunca perder una venta.</p>
+      </div>
+      <div class="benefit-img">
+        <div style="background:var(--bg3);border-radius:10px;padding:16px;border:1px solid var(--border)">
+          <div style="font-size:.78rem;color:var(--text2);margin-bottom:10px" data-i18n="benefit.alertsTitle">Alertas activas</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;gap:8px;align-items:center;font-size:.8rem" data-i18n="benefit.alert1"><span style="color:var(--red)">●</span> Galletas Oreo — Stock crítico (2 unid.)</div>
+            <div style="display:flex;gap:8px;align-items:center;font-size:.8rem" data-i18n="benefit.alert2"><span style="color:var(--yellow)">●</span> Leche Gloria — Vence en 2 días</div>
+            <div style="display:flex;gap:8px;align-items:center;font-size:.8rem" data-i18n="benefit.alert3"><span style="color:var(--yellow)">●</span> Yogurt Laive — Vence en 5 días</div>
+            <div style="display:flex;gap:8px;align-items:center;font-size:.8rem" data-i18n="benefit.alert4"><span style="color:var(--cyan)">●</span> 12pm–1pm hora pico detectada · reponer</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT THE PRODUCT -->
+<!--
+<section class="about-section alt" id="producto">
+  <div class="about-inner">
+    <div class="reveal">
+      <div class="about-badge" data-i18n="aboutProduct.badge">About the product · FlowTrack</div>
+      <h2 data-i18n="aboutProduct.title">FlowTrack, explicado en 60 segundos</h2>
+      <p data-i18n="aboutProduct.p1">Una vista rápida de cómo FlowTrack centraliza inventario, alertas y analítica para que tomes decisiones sin depender de Excel, sin perder ventas por quiebres y con datos confiables.</p>
+      <p style="margin-bottom:0" data-i18n="aboutProduct.p2">Ideal para bodegas y pequeños negocios que quieren operar con claridad y velocidad desde el primer día.</p>
+    </div>
+    <div class="reveal">
+      <div class="video-card lift">
+        <div class="video-card-header">
+          <div class="db-dot" style="background:#ef4444"></div>
+          <div class="db-dot" style="background:#f59e0b"></div>
+          <div class="db-dot" style="background:#22c55e"></div>
+          <span data-i18n="video.product.header">Video — Demo de FlowTrack</span>
+        </div>
+        <div class="video-card-body">
+          <video class="about-video" controls playsinline preload="metadata">
+            <source src="videos/flowtrack.mp4" type="video/mp4" />
+            Tu navegador no soporta la reproducción de video.
+          </video>
+          <div class="video-caption" data-i18n="aboutProduct.tip">Tip: reemplaza <b>videos/flowtrack.mp4</b> por tu archivo o link.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+-->
+
+<!-- ABOUT THE TEAM -->
+<!--
+<section class="about-section" id="equipo">
+  <div class="about-inner">
+    <div class="reveal">
+      <div class="video-card lift">
+        <div class="video-card-header">
+          <div class="db-dot" style="background:#ef4444"></div>
+          <div class="db-dot" style="background:#f59e0b"></div>
+          <div class="db-dot" style="background:#22c55e"></div>
+          <span data-i18n="video.team.header">Video — About Nexora</span>
+        </div>
+        <div class="video-card-body">
+          <video class="about-video" controls playsinline preload="metadata">
+            <source src="videos/nexora.mp4" type="video/mp4" />
+            Tu navegador no soporta la reproducción de video.
+          </video>
+          <div class="video-caption" data-i18n="aboutTeam.tip">Tip: reemplaza <b>videos/nexora.mp4</b> por tu archivo o link.</div>
+        </div>
+      </div>
+    </div>
+    <div class="reveal">
+      <div class="about-badge" style="background:rgba(34,197,94,.10);border-color:rgba(34,197,94,.28);color:var(--green)" data-i18n="aboutTeam.badge">About the team · Nexora</div>
+      <h2 data-i18n="aboutTeam.title">Construimos productos con obsesión por la ejecución</h2>
+      <p data-i18n="aboutTeam.p1">Nexora es el equipo detrás de FlowTrack. Combinamos producto, diseño e ingeniería para digitalizar el canal tradicional con herramientas simples, robustas y centradas en la realidad del negocio.</p>
+      <p style="margin-bottom:0" data-i18n="aboutTeam.p2">Nuestro foco: reducir fricción, aumentar precisión y entregar valor medible en semanas, no meses.</p>
+    </div>
+  </div>
+</section>
+-->
+
+<!-- CTA MID -->
+<div class="cta-mid">
+  <h2 data-i18n="ctaMid.title">¿Suena bien? Compruébalo por ti mismo</h2>
+  <p data-i18n="ctaMid.sub">Sin tarjeta de crédito. Sin compromisos. 14 días completamente gratis.</p>
+  <a href="#" class="btn-primary" style="padding:14px 32px;font-size:1rem;display:inline-block" data-i18n="ctaMid.cta">Empezar prueba gratuita de 14 días</a>
+</div>
+
+<!-- PRICING -->
+<section class="pricing-section" id="planes">
+  <div class="section-header">
+    <h2 data-i18n="pricing.title">Planes simples y transparentes</h2>
+    <p data-i18n="pricing.sub">Elige el plan que mejor se adapta a tu negocio.</p>
+  </div>
+  <div style="text-align:center">
+    <div class="toggle-wrap">
+      <button class="toggle-btn active" onclick="setPricing('monthly',this)" data-i18n="pricing.toggle.monthly">Mensual</button>
+      <button class="toggle-btn" onclick="setPricing('annual',this)" data-i18n="pricing.toggle.annual">Anual (Ahorra 20%)</button>
+    </div>
+  </div>
+  <div class="pricing-grid">
+    <!-- Básico -->
+    <div class="pricing-card reveal lift">
+      <div class="price-name" data-i18n="pricing.basic.name">Plan Básico</div>
+      <div class="price-amount">S/0</div>
+      <div class="price-period" data-i18n="pricing.basic.period">/ mes · Gratis para siempre</div>
+      <a href="#" class="price-btn btn-ghost" data-i18n="pricing.basic.cta">Seleccionar plan</a>
+      <ul class="price-list">
+        <li class="on" data-i18n="pricing.basic.li1"><span class="check">✓</span> 1 Usuario</li>
+        <li class="on" data-i18n="pricing.basic.li2"><span class="check">✓</span> Hasta 100 productos</li>
+        <li class="on" data-i18n="pricing.basic.li3"><span class="check">✓</span> Entradas y salidas de inventario</li>
+        <li class="on" data-i18n="pricing.basic.li4"><span class="check">✓</span> Reporte de stock actual</li>
+        <li class="on" data-i18n="pricing.basic.li5"><span class="check">✓</span> Alertas de stock y vencimiento</li>
+        <li data-i18n="pricing.basic.li6"><span class="cross">✗</span> Visión IA con YOLO</li>
+        <li data-i18n="pricing.basic.li7"><span class="cross">✗</span> Análisis de afluencia</li>
+        <li data-i18n="pricing.basic.li8"><span class="cross">✗</span> Roles y permisos avanzados</li>
+        <li data-i18n="pricing.basic.li9"><span class="cross">✗</span> Soporte prioritario por WhatsApp</li>
+      </ul>
+    </div>
+    <!-- Emprendedor -->
+    <div class="pricing-card popular reveal lift">
+      <div class="popular-badge" data-i18n="pricing.popular">Más popular</div>
+      <div class="price-name" data-i18n="pricing.entre.name">Plan Emprendedor</div>
+      <div class="price-amount"><sup>S/</sup><span id="price-emp">49</span></div>
+      <div class="price-period" id="period-emp" data-i18n="pricing.entre.period.monthly">/ mes · <s style="color:var(--text3)">S/588/año</s></div>
+      <a href="#" class="price-btn btn-primary" data-i18n="pricing.entre.cta">Probar 14 días gratis</a>
+      <ul class="price-list">
+        <li class="on" data-i18n="pricing.entre.li1"><span class="check">✓</span> 1 Usuario</li>
+        <li class="on" data-i18n="pricing.entre.li2"><span class="check">✓</span> Hasta 500 productos</li>
+        <li class="on" data-i18n="pricing.entre.li3"><span class="check">✓</span> Entradas y salidas de inventario</li>
+        <li class="on" data-i18n="pricing.entre.li4"><span class="check">✓</span> Reporte de stock actual</li>
+        <li class="on" data-i18n="pricing.entre.li5"><span class="check">✓</span> Alertas de stock y vencimiento</li>
+        <li class="on" data-i18n="pricing.entre.li6"><span class="check">✓</span> Creación de kits y paquetes</li>
+        <li class="on" style="color:var(--cyan)" data-i18n="pricing.entre.li7"><span class="check" style="color:var(--cyan)">✓</span> Visión IA con YOLO (básico)</li>
+        <li class="on" style="color:var(--cyan)" data-i18n="pricing.entre.li8"><span class="check" style="color:var(--cyan)">✓</span> Análisis de afluencia</li>
+        <li data-i18n="pricing.entre.li9"><span class="cross">✗</span> Soporte prioritario por WhatsApp</li>
+      </ul>
+    </div>
+    <!-- Empresa -->
+    <div class="pricing-card reveal lift">
+      <div class="price-name" data-i18n="pricing.biz.name">Plan Empresa</div>
+      <div class="price-amount"><sup>S/</sup><span id="price-emp2">199</span></div>
+      <div class="price-period" id="period-emp2" data-i18n="pricing.biz.period.monthly">/ mes · <s style="color:var(--text3)">S/2,388/año</s></div>
+      <a href="#" class="price-btn btn-ghost" data-i18n="pricing.biz.cta">Contactar Ventas</a>
+      <ul class="price-list">
+        <li class="on" data-i18n="pricing.biz.li1"><span class="check">✓</span> 5+ Usuarios incluidos</li>
+        <li class="on" data-i18n="pricing.biz.li2"><span class="check">✓</span> Productos ilimitados</li>
+        <li class="on" data-i18n="pricing.biz.li3"><span class="check">✓</span> Múltiples almacenes</li>
+        <li class="on" data-i18n="pricing.biz.li4"><span class="check">✓</span> Reportes avanzados</li>
+        <li class="on" data-i18n="pricing.biz.li5"><span class="check">✓</span> Roles y permisos avanzados</li>
+        <li class="on" style="color:var(--cyan)" data-i18n="pricing.biz.li6"><span class="check" style="color:var(--cyan)">✓</span> YOLO avanzado (multi-cámara)</li>
+        <li class="on" style="color:var(--cyan)" data-i18n="pricing.biz.li7"><span class="check" style="color:var(--cyan)">✓</span> Análisis de afluencia completo</li>
+        <li class="on" data-i18n="pricing.biz.li8"><span class="check">✓</span> Soporte prioritario por WhatsApp</li>
+        <li class="on" data-i18n="pricing.biz.li9"><span class="check">✓</span> API e integraciones</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq-section" id="faq">
+  <div class="section-header">
+    <h2 data-i18n="faq.title">¿Tienes dudas?</h2>
+    <p data-i18n="faq.sub">Aquí resolvemos tus preguntas más frecuentes.</p>
+  </div>
+  <div class="faq-list">
+    <div class="faq-item reveal lift">
+      <div class="faq-q" onclick="toggleFaq(this)"><span data-i18n="faq.q1">¿Necesito tarjeta de crédito para empezar?</span> <span class="arrow">▼</span></div>
+      <div class="faq-a"><div class="faq-a-inner" data-i18n="faq.a1">No, no necesitas tarjeta de crédito para empezar. Nuestro plan básico es completamente gratuito y puedes probar el plan Emprendedor durante 14 días sin costo alguno. Solo necesitas registrarte con tu correo electrónico para comenzar.</div></div>
+    </div>
+    <div class="faq-item reveal lift">
+      <div class="faq-q" onclick="toggleFaq(this)"><span data-i18n="faq.q2">¿Cómo funciona la tecnología YOLO en mi bodega?</span> <span class="arrow">▼</span></div>
+      <div class="faq-a"><div class="faq-a-inner" data-i18n="faq.a2">FlowTrack usa Ultralytics YOLO, un modelo de visión por computadora de última generación. Solo necesitas conectar una cámara compatible (webcam o IP) a tu dispositivo. El sistema detecta y contabiliza productos automáticamente durante la recepción de mercadería. Tú validas el resultado antes de guardar, así siempre tienes control total.</div></div>
+    </div>
+    <div class="faq-item reveal lift">
+      <div class="faq-q" onclick="toggleFaq(this)"><span data-i18n="faq.q3">¿Necesito equipos especiales para el análisis de afluencia?</span> <span class="arrow">▼</span></div>
+      <div class="faq-a"><div class="faq-a-inner" data-i18n="faq.a3">No necesitas equipos costosos. FlowTrack funciona con cámaras de seguridad estándar o webcams ubicadas en la entrada de tu local. El sistema procesa las imágenes y te entrega métricas de visitantes, horas pico y tasas de conversión directamente en tu panel.</div></div>
+    </div>
+    <div class="faq-item reveal lift">
+      <div class="faq-q" onclick="toggleFaq(this)"><span data-i18n="faq.q4">¿Qué pasa después de los 14 días de prueba gratuita?</span> <span class="arrow">▼</span></div>
+      <div class="faq-a"><div class="faq-a-inner" data-i18n="faq.a4">Después de los 14 días, puedes elegir continuar con el plan gratuito básico o suscribirte a uno de nuestros planes de pago. No hay compromisos y puedes cancelar en cualquier momento.</div></div>
+    </div>
+    <div class="faq-item reveal lift">
+      <div class="faq-q" onclick="toggleFaq(this)"><span data-i18n="faq.q5">¿Puedo cambiar de plan en cualquier momento?</span> <span class="arrow">▼</span></div>
+      <div class="faq-a"><div class="faq-a-inner" data-i18n="faq.a5">Sí, puedes actualizar o degradar tu plan en cualquier momento desde tu panel de control. Los cambios se aplican de inmediato y la facturación se ajusta proporcionalmente.</div></div>
+    </div>
+    <div class="faq-item reveal lift">
+      <div class="faq-q" onclick="toggleFaq(this)"><span data-i18n="faq.q6">¿FlowTrack está pensado para bodegas peruanas?</span> <span class="arrow">▼</span></div>
+      <div class="faq-a"><div class="faq-a-inner" data-i18n="faq.a6">Exactamente. FlowTrack fue diseñado específicamente para el canal tradicional peruano: bodegas, micromercados y emprendedores. Sabemos que apenas el 29% de las bodegas usan herramientas digitales, y nuestro objetivo es que la adopción sea simple, sin fricciones y accesible desde el primer día.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-logo"><img class="nav-logo-img" src="assets/logoStockTrack.png" alt="StockTrack logo"> Flow<span>Track</span></div>
+      <div class="footer-tagline" data-i18n="footer.tagline">Simplificando el inventario para bodegas y pequeños negocios de Latinoamérica.</div>
+    </div>
+    <div class="footer-copy" data-i18n="footer.copy">© 2026 FlowTrack · Hecho en Perú</div>
+  </div>
+</footer>
+
+<script>
+  // --- i18n (ES/EN) ---
+  const I18N = {
+    es: {
+      "nav.features": "Características",
+      "nav.yolo": "YOLO Vision",
+      "nav.flow": "Afluencia",
+      "nav.product": "Producto",
+      "nav.team": "Equipo",
+      "nav.plans": "Planes",
+      "nav.faq": "FAQ",
+      "nav.login": "Iniciar Sesión",
+      "nav.try": "Prueba Gratis",
+      "hero.badge": "Potenciado con IA · Ultralytics YOLO",
+      "hero.title": "Controla tu inventario,<br><span>sin errores ni sorpresas</span>",
+      "hero.sub": "Diseñado para dueños de bodegas y emprendedores que buscan reducir pérdidas, evitar quiebres de stock y tomar decisiones con datos confiables.",
+      "hero.ctaPrimary": "Prueba FlowTrack gratis",
+      "hero.ctaSecondary": "Ver tecnología YOLO",
+      "hero.note": "<span>✓</span> 14 días gratis &nbsp;·&nbsp; <span>✓</span> No necesitas tarjeta",
+      "features.title": "Todo lo que necesitas para tener tu inventario bajo control",
+      "features.sub": "Una plataforma SaaS completa, diseñada para el canal tradicional peruano.",
+      "yolo.badge": "Ultralytics YOLO · Visión por Computadora",
+      "yolo.title": "Detección inteligente de productos con IA en tiempo real",
+      "yolo.sub": "FlowTrack incorpora visión por computadora mediante Ultralytics YOLO como asistente inteligente en los procesos de reposición de stock, permitiendo contabilizar productos a través de cámaras para agilizar el registro de ingresos, siempre bajo validación del usuario.",
+      "yolo.f1.t": "Detección automática de productos",
+      "yolo.f1.p": "Identifica y contabiliza productos en tiempo real mediante cámaras, acelerando el proceso de recepción de mercadería.",
+      "yolo.f2.t": "Validación por el usuario",
+      "yolo.f2.p": "El sistema actúa como asistente: propone el conteo automático y el operador confirma, garantizando precisión y control.",
+      "yolo.f3.t": "Reducción de errores humanos",
+      "yolo.f3.p": "Minimiza los costos operativos derivados del error manual durante los inventarios físicos y la reposición.",
+      "yolo.camTitle": "Cámara 01 — Almacén Principal · YOLO v8 activo",
+      "yolo.detectedPrefix": "Detectados:",
+      "yolo.detectedSuffix": "productos",
+      "yolo.stat.precision": "Precisión",
+      "yolo.stat.speed": "Velocidad",
+      "yolo.stat.today": "Registros hoy",
+      "flow.badge": "Análisis de Afluencia de Clientes",
+      "flow.title": "Conoce el comportamiento real de tus clientes",
+      "flow.sub": "FlowTrack integra un sistema de análisis de afluencia mediante cámaras en puntos estratégicos, como entradas o zonas de tránsito, permitiendo contabilizar visitantes de forma precisa a lo largo del día.",
+      "flow.camTitle": "Análisis de Afluencia · Entrada Principal",
+      "flow.chartTitle": "Clientes por hora — Hoy",
+      "flow.kpi.today": "Clientes hoy",
+      "flow.kpi.peak": "Hora pico",
+      "flow.kpi.conv": "Conversión",
+      "flow.f1.t": "Métricas clave de clientes",
+      "flow.f1.p": "Número de visitantes por día, horas pico y tasas de conversión para optimizar tu operación.",
+      "flow.f2.t": "Integración con ventas e inventario",
+      "flow.f2.p": "Cruza datos de afluencia con movimientos de stock para una visión completa del rendimiento del negocio.",
+      "flow.f3.t": "Planificación basada en datos reales",
+      "flow.f3.p": "Optimiza horarios, staffing y reposición según los patrones reales de tu bodega.",
+
+      "benefit.1.tag": "Control Total",
+      "benefit.1.title": "Ten control total con tu inventario en un solo lugar",
+      "benefit.1.p": "Dile adiós al cuaderno y a las hojas de cálculo. Con FlowTrack, centralizas tus productos en una plataforma intuitiva y accesible desde cualquier lugar. Sabrás exactamente qué tienes y dónde está, en tiempo real.",
+      "benefit.2.tag": "Sin Pérdidas",
+      "benefit.2.title": "Reduce las pérdidas a cero con alertas automáticas",
+      "benefit.2.p": "Deja de perder dinero por productos vencidos o por quedarte sin tu producto más vendido. FlowTrack te notifica cuando un artículo requiere tu atención, para que puedas actuar a tiempo y nunca perder una venta.",
+      "benefit.alertsTitle": "Alertas activas",
+      "benefit.mock1": "Stock: 48 unidades · Lote A-231",
+      "benefit.mock2": "Stock: 4 unidades · Vence: 3 días",
+      "benefit.mock3": "Stock: 0 unidades · ¡Quiebre!",
+      "benefit.chip.ok": "✓ OK",
+      "benefit.chip.low": "⚠ Bajo",
+      "benefit.chip.crit": "✗ Crítico",
+      "benefit.alert1": "<span style=\"color:var(--red)\">●</span> Galletas Oreo — Stock crítico (2 unid.)",
+      "benefit.alert2": "<span style=\"color:var(--yellow)\">●</span> Leche Gloria — Vence en 2 días",
+      "benefit.alert3": "<span style=\"color:var(--yellow)\">●</span> Yogurt Laive — Vence en 5 días",
+      "benefit.alert4": "<span style=\"color:var(--cyan)\">●</span> 12pm–1pm hora pico detectada · reponer",
+
+      "video.product.header": "Video — Demo de FlowTrack",
+      "video.team.header": "Video — About Nexora",
+      "aboutProduct.badge": "About the product · FlowTrack",
+      "aboutProduct.title": "FlowTrack, explicado en 60 segundos",
+      "aboutProduct.p1": "Una vista rápida de cómo FlowTrack centraliza inventario, alertas y analítica para que tomes decisiones sin depender de Excel, sin perder ventas por quiebres y con datos confiables.",
+      "aboutProduct.p2": "Ideal para bodegas y pequeños negocios que quieren operar con claridad y velocidad desde el primer día.",
+      "aboutProduct.tip": "Tip: reemplaza <b>videos/flowtrack.mp4</b> por tu archivo o link.",
+      "aboutTeam.badge": "About the team · Nexora",
+      "aboutTeam.title": "Construimos productos con obsesión por la ejecución",
+      "aboutTeam.p1": "Nexora es el equipo detrás de FlowTrack. Combinamos producto, diseño e ingeniería para digitalizar el canal tradicional con herramientas simples, robustas y centradas en la realidad del negocio.",
+      "aboutTeam.p2": "Nuestro foco: reducir fricción, aumentar precisión y entregar valor medible en semanas, no meses.",
+      "aboutTeam.tip": "Tip: reemplaza <b>videos/nexora.mp4</b> por tu archivo o link.",
+      "ctaMid.title": "¿Suena bien? Compruébalo por ti mismo",
+      "ctaMid.sub": "Sin tarjeta de crédito. Sin compromisos. 14 días completamente gratis.",
+      "ctaMid.cta": "Empezar prueba gratuita de 14 días",
+      "wf.topbarTitle": "FlowTrack — Panel",
+      "wf.userTitle": "Usuario",
+      "wf.userSub": "Resumen de tu inventario",
+      "wf.noCard": "No necesitas tarjeta",
+      "wf.kpi.inventory": "Productos en inventario",
+      "wf.kpi.categories": "Categorías activas",
+      "wf.kpi.alerts": "Productos con alertas",
+      "wf.kpi.date": "Enero 25, 2026",
+      "wf.mid.title": "Productos más rotativos",
+      "wf.mid.sub": "Vista rápida del rendimiento",
+      "wf.toast.risk": "Productos en riesgo",
+      "wf.toast.warn": "Productos con alerta",
+      "wf.toast.ok": "Días disponibles",
+
+      "feat.1.t": "Inventario en Tiempo Real",
+      "feat.1.p": "Conoce tus niveles de stock al instante, desde cualquier lugar y en cualquier dispositivo.",
+      "feat.2.t": "Historial de Movimientos",
+      "feat.2.p": "Rastrea cada entrada, salida o ajuste. Ten una trazabilidad completa de tu inventario.",
+      "feat.3.t": "Reportes Visuales",
+      "feat.3.p": "Entiende qué productos son los más rentables con reportes claros y fáciles de interpretar.",
+      "feat.4.t": "Alertas Automáticas",
+      "feat.4.p": "Recibe notificaciones de stock bajo y productos por vencer antes de que se conviertan en un problema.",
+      "feat.5.t": "Visión IA con YOLO",
+      "feat.5.p": "Contabiliza productos automáticamente mediante cámaras. Ultralytics YOLO como asistente de reposición.",
+      "feat.6.t": "Análisis de Afluencia",
+      "feat.6.p": "Mide el flujo de clientes, horas pico y tasas de conversión integradas con tus datos de ventas.",
+      "feat.7.t": "Control de Vencimientos",
+      "feat.7.p": "Asigna lotes y fechas de vencimiento para reducir pérdidas por productos caducados a cero.",
+      "feat.8.t": "Escaneo de Códigos",
+      "feat.8.p": "Registra movimientos de stock rápidamente mediante lectura de códigos de barras de alta fiabilidad.",
+      "feat.9.t": "Kits y Paquetes",
+      "feat.9.p": "Agrupa productos en paquetes o promociones y el sistema ajustará el stock automáticamente.",
+
+      "pricing.title": "Planes simples y transparentes",
+      "pricing.sub": "Elige el plan que mejor se adapta a tu negocio.",
+      "pricing.toggle.monthly": "Mensual",
+      "pricing.toggle.annual": "Anual (Ahorra 20%)",
+      "pricing.popular": "Más popular",
+      "pricing.basic.name": "Plan Básico",
+      "pricing.basic.period": "/ mes · Gratis para siempre",
+      "pricing.basic.cta": "Seleccionar plan",
+      "pricing.basic.li1": "<span class=\"check\">✓</span> 1 Usuario",
+      "pricing.basic.li2": "<span class=\"check\">✓</span> Hasta 100 productos",
+      "pricing.basic.li3": "<span class=\"check\">✓</span> Entradas y salidas de inventario",
+      "pricing.basic.li4": "<span class=\"check\">✓</span> Reporte de stock actual",
+      "pricing.basic.li5": "<span class=\"check\">✓</span> Alertas de stock y vencimiento",
+      "pricing.basic.li6": "<span class=\"cross\">✗</span> Visión IA con YOLO",
+      "pricing.basic.li7": "<span class=\"cross\">✗</span> Análisis de afluencia",
+      "pricing.basic.li8": "<span class=\"cross\">✗</span> Roles y permisos avanzados",
+      "pricing.basic.li9": "<span class=\"cross\">✗</span> Soporte prioritario por WhatsApp",
+      "pricing.entre.name": "Plan Emprendedor",
+      "pricing.entre.period.monthly": "/ mes · <s style=\"color:var(--text3)\">S/588/año</s>",
+      "pricing.entre.period.annual": "/ mes · <s style=\"color:var(--text3)\">S/470/año</s>",
+      "pricing.entre.cta": "Probar 14 días gratis",
+      "pricing.entre.li1": "<span class=\"check\">✓</span> 1 Usuario",
+      "pricing.entre.li2": "<span class=\"check\">✓</span> Hasta 500 productos",
+      "pricing.entre.li3": "<span class=\"check\">✓</span> Entradas y salidas de inventario",
+      "pricing.entre.li4": "<span class=\"check\">✓</span> Reporte de stock actual",
+      "pricing.entre.li5": "<span class=\"check\">✓</span> Alertas de stock y vencimiento",
+      "pricing.entre.li6": "<span class=\"check\">✓</span> Creación de kits y paquetes",
+      "pricing.entre.li7": "<span class=\"check\" style=\"color:var(--cyan)\">✓</span> Visión IA con YOLO (básico)",
+      "pricing.entre.li8": "<span class=\"check\" style=\"color:var(--cyan)\">✓</span> Análisis de afluencia",
+      "pricing.entre.li9": "<span class=\"cross\">✗</span> Soporte prioritario por WhatsApp",
+      "pricing.biz.name": "Plan Empresa",
+      "pricing.biz.period.monthly": "/ mes · <s style=\"color:var(--text3)\">S/2,388/año</s>",
+      "pricing.biz.period.annual": "/ mes · <s style=\"color:var(--text3)\">S/1,908/año</s>",
+      "pricing.biz.cta": "Contactar Ventas",
+      "pricing.biz.li1": "<span class=\"check\">✓</span> 5+ Usuarios incluidos",
+      "pricing.biz.li2": "<span class=\"check\">✓</span> Productos ilimitados",
+      "pricing.biz.li3": "<span class=\"check\">✓</span> Múltiples almacenes",
+      "pricing.biz.li4": "<span class=\"check\">✓</span> Reportes avanzados",
+      "pricing.biz.li5": "<span class=\"check\">✓</span> Roles y permisos avanzados",
+      "pricing.biz.li6": "<span class=\"check\" style=\"color:var(--cyan)\">✓</span> YOLO avanzado (multi-cámara)",
+      "pricing.biz.li7": "<span class=\"check\" style=\"color:var(--cyan)\">✓</span> Análisis de afluencia completo",
+      "pricing.biz.li8": "<span class=\"check\">✓</span> Soporte prioritario por WhatsApp",
+      "pricing.biz.li9": "<span class=\"check\">✓</span> API e integraciones",
+
+      "faq.title": "¿Tienes dudas?",
+      "faq.sub": "Aquí resolvemos tus preguntas más frecuentes.",
+      "faq.q1": "¿Necesito tarjeta de crédito para empezar?",
+      "faq.a1": "No, no necesitas tarjeta de crédito para empezar. Nuestro plan básico es completamente gratuito y puedes probar el plan Emprendedor durante 14 días sin costo alguno. Solo necesitas registrarte con tu correo electrónico para comenzar.",
+      "faq.q2": "¿Cómo funciona la tecnología YOLO en mi bodega?",
+      "faq.a2": "FlowTrack usa Ultralytics YOLO, un modelo de visión por computadora de última generación. Solo necesitas conectar una cámara compatible (webcam o IP) a tu dispositivo. El sistema detecta y contabiliza productos automáticamente durante la recepción de mercadería. Tú validas el resultado antes de guardar, así siempre tienes control total.",
+      "faq.q3": "¿Necesito equipos especiales para el análisis de afluencia?",
+      "faq.a3": "No necesitas equipos costosos. FlowTrack funciona con cámaras de seguridad estándar o webcams ubicadas en la entrada de tu local. El sistema procesa las imágenes y te entrega métricas de visitantes, horas pico y tasas de conversión directamente en tu panel.",
+      "faq.q4": "¿Qué pasa después de los 14 días de prueba gratuita?",
+      "faq.a4": "Después de los 14 días, puedes elegir continuar con el plan gratuito básico o suscribirte a uno de nuestros planes de pago. No hay compromisos y puedes cancelar en cualquier momento.",
+      "faq.q5": "¿Puedo cambiar de plan en cualquier momento?",
+      "faq.a5": "Sí, puedes actualizar o degradar tu plan en cualquier momento desde tu panel de control. Los cambios se aplican de inmediato y la facturación se ajusta proporcionalmente.",
+      "faq.q6": "¿FlowTrack está pensado para bodegas peruanas?",
+      "faq.a6": "Exactamente. FlowTrack fue diseñado específicamente para el canal tradicional peruano: bodegas, micromercados y emprendedores. Sabemos que apenas el 29% de las bodegas usan herramientas digitales, y nuestro objetivo es que la adopción sea simple, sin fricciones y accesible desde el primer día.",
+
+      "footer.tagline": "Simplificando el inventario para bodegas y pequeños negocios de Latinoamérica.",
+      "footer.copy": "© 2026 FlowTrack · Hecho en Perú",
+
+      "testimonials.title": "Lo que dicen nuestros usuarios",
+      "testimonials.1.name": "Rosa Quispe",
+      "testimonials.1.role": "Dueña de bodega",
+      "testimonials.1.quote": "“Con FlowTrack ya no me quedo sin productos clave. Las alertas de stock me avisan a tiempo y ahora repongo con mucha más calma.”",
+      "testimonials.2.name": "Carlos Méndez",
+      "testimonials.2.role": "Administrador de minimarket",
+      "testimonials.2.quote": "“Antes cerrábamos el día con muchas dudas. Ahora veo entradas, salidas y productos por vencer en un solo panel. Ahorro tiempo todos los días.”",
+      "testimonials.3.name": "Sofía Rivas",
+      "testimonials.3.role": "Encargada de almacén",
+      "testimonials.3.quote": "“La parte que más valoro es el control de vencimientos. Reducimos pérdidas y siempre sé qué lotes debo mover primero.”",
+    },
+    en: {
+      "nav.features": "Features",
+      "nav.yolo": "YOLO Vision",
+      "nav.flow": "Foot Traffic",
+      "nav.product": "Product",
+      "nav.team": "Team",
+      "nav.plans": "Plans",
+      "nav.faq": "FAQ",
+      "nav.login": "Log in",
+      "nav.try": "Free trial",
+      "hero.badge": "AI-powered · Ultralytics YOLO",
+      "hero.title": "Control your inventory,<br><span>without errors or surprises</span>",
+      "hero.sub": "Built for small store owners and entrepreneurs who want to reduce losses, avoid stock-outs, and make decisions with reliable data.",
+      "hero.ctaPrimary": "Try FlowTrack for free",
+      "hero.ctaSecondary": "See YOLO tech",
+      "hero.note": "<span>✓</span> 14-day free trial &nbsp;·&nbsp; <span>✓</span> No card required",
+      "features.title": "Everything you need to keep inventory under control",
+      "features.sub": "A complete SaaS platform designed for traditional retail operations.",
+      "yolo.badge": "Ultralytics YOLO · Computer Vision",
+      "yolo.title": "Real-time AI product detection",
+      "yolo.sub": "FlowTrack brings computer vision with Ultralytics YOLO as an intelligent assistant for replenishment workflows, counting products through cameras to speed up receiving—always under user verification.",
+      "yolo.f1.t": "Automatic product detection",
+      "yolo.f1.p": "Detect and count products in real time with cameras to speed up receiving.",
+      "yolo.f2.t": "User verification",
+      "yolo.f2.p": "The system assists: it proposes a count and the operator confirms—ensuring accuracy and control.",
+      "yolo.f3.t": "Fewer human errors",
+      "yolo.f3.p": "Reduce operational costs caused by manual mistakes during stocktakes and replenishment.",
+      "yolo.camTitle": "Camera 01 — Main warehouse · YOLO v8 active",
+      "yolo.detectedPrefix": "Detected:",
+      "yolo.detectedSuffix": "products",
+      "yolo.stat.precision": "Precision",
+      "yolo.stat.speed": "Speed",
+      "yolo.stat.today": "Records today",
+      "flow.badge": "Foot Traffic Analytics",
+      "flow.title": "Understand your real customer flow",
+      "flow.sub": "FlowTrack measures foot traffic through cameras placed at key points like entrances or corridors, delivering accurate visitor counts throughout the day.",
+      "flow.camTitle": "Foot Traffic · Main entrance",
+      "flow.chartTitle": "Customers per hour — Today",
+      "flow.kpi.today": "Customers today",
+      "flow.kpi.peak": "Peak hour",
+      "flow.kpi.conv": "Conversion",
+      "flow.f1.t": "Key customer metrics",
+      "flow.f1.p": "Visitors per day, peak hours, and conversion rates to optimize operations.",
+      "flow.f2.t": "Sales + inventory integration",
+      "flow.f2.p": "Combine traffic data with stock movements for a complete performance view.",
+      "flow.f3.t": "Plan with real data",
+      "flow.f3.p": "Optimize staffing and replenishment based on real patterns.",
+
+      "benefit.1.tag": "Total control",
+      "benefit.1.title": "Keep everything in one place",
+      "benefit.1.p": "Say goodbye to notebooks and spreadsheets. With FlowTrack, you centralize products in an intuitive platform accessible anywhere. Know exactly what you have and where—live.",
+      "benefit.2.tag": "No losses",
+      "benefit.2.title": "Cut losses to zero with smart alerts",
+      "benefit.2.p": "Stop losing money to expired items or stock-outs. FlowTrack notifies you when something needs attention so you can act in time and never miss a sale.",
+      "benefit.alertsTitle": "Active alerts",
+      "benefit.mock1": "Stock: 48 units · Lot A-231",
+      "benefit.mock2": "Stock: 4 units · Expires: 3 days",
+      "benefit.mock3": "Stock: 0 units · Stock-out!",
+      "benefit.chip.ok": "✓ OK",
+      "benefit.chip.low": "⚠ Low",
+      "benefit.chip.crit": "✗ Critical",
+      "benefit.alert1": "<span style=\"color:var(--red)\">●</span> Oreo cookies — Critical stock (2 units)",
+      "benefit.alert2": "<span style=\"color:var(--yellow)\">●</span> Gloria milk — Expires in 2 days",
+      "benefit.alert3": "<span style=\"color:var(--yellow)\">●</span> Laive yogurt — Expires in 5 days",
+      "benefit.alert4": "<span style=\"color:var(--cyan)\">●</span> 12pm–1pm peak hour detected · restock",
+
+      "video.product.header": "Video — FlowTrack demo",
+      "video.team.header": "Video — About Nexora",
+      "aboutProduct.badge": "About the product · FlowTrack",
+      "aboutProduct.title": "FlowTrack in 60 seconds",
+      "aboutProduct.p1": "A quick look at how FlowTrack centralizes inventory, alerts, and analytics so you can decide without spreadsheets, avoid stock-outs, and trust your numbers.",
+      "aboutProduct.p2": "Ideal for small stores that want clarity and speed from day one.",
+      "aboutProduct.tip": "Tip: replace <b>videos/flowtrack.mp4</b> with your file or link.",
+      "aboutTeam.badge": "About the team · Nexora",
+      "aboutTeam.title": "We build with execution in mind",
+      "aboutTeam.p1": "Nexora is the team behind FlowTrack. We blend product, design, and engineering to digitize traditional retail with simple, robust tools built for real-world operations.",
+      "aboutTeam.p2": "Our focus: reduce friction, increase accuracy, and deliver measurable value in weeks—not months.",
+      "aboutTeam.tip": "Tip: replace <b>videos/nexora.mp4</b> with your file or link.",
+      "ctaMid.title": "Sounds good? See it for yourself",
+      "ctaMid.sub": "No credit card. No commitments. 14 days completely free.",
+      "ctaMid.cta": "Start your 14-day free trial",
+      "wf.topbarTitle": "FlowTrack — Panel",
+      "wf.userTitle": "User",
+      "wf.userSub": "Your inventory overview",
+      "wf.noCard": "No card required",
+      "wf.kpi.inventory": "Products in inventory",
+      "wf.kpi.categories": "Active categories",
+      "wf.kpi.alerts": "Products with alerts",
+      "wf.kpi.date": "Jan 25, 2026",
+      "wf.mid.title": "Top moving products",
+      "wf.mid.sub": "Quick performance view",
+      "wf.toast.risk": "Products at risk",
+      "wf.toast.warn": "Products with alert",
+      "wf.toast.ok": "Days available",
+
+      "feat.1.t": "Real-time Inventory",
+      "feat.1.p": "See stock levels instantly, from anywhere and on any device.",
+      "feat.2.t": "Movement History",
+      "feat.2.p": "Track every inbound, outbound, or adjustment. Full traceability for your inventory.",
+      "feat.3.t": "Visual Reports",
+      "feat.3.p": "Understand your most profitable products with clear, easy-to-read reports.",
+      "feat.4.t": "Automatic Alerts",
+      "feat.4.p": "Get notified about low stock and expiring products before they become a problem.",
+      "feat.5.t": "AI Vision with YOLO",
+      "feat.5.p": "Count products automatically using cameras. Ultralytics YOLO as a replenishment assistant.",
+      "feat.6.t": "Foot Traffic Analytics",
+      "feat.6.p": "Measure customer flow, peak hours, and conversion rates tied to your sales data.",
+      "feat.7.t": "Expiration Control",
+      "feat.7.p": "Assign batches and expiry dates to reduce losses from expired products to zero.",
+      "feat.8.t": "Barcode Scanning",
+      "feat.8.p": "Record stock movements quickly with reliable barcode scanning.",
+      "feat.9.t": "Bundles & Kits",
+      "feat.9.p": "Group products into bundles or promos and keep stock updated automatically.",
+
+      "pricing.title": "Simple, transparent plans",
+      "pricing.sub": "Choose the plan that best fits your business.",
+      "pricing.toggle.monthly": "Monthly",
+      "pricing.toggle.annual": "Annual (Save 20%)",
+      "pricing.popular": "Most popular",
+      "pricing.basic.name": "Basic",
+      "pricing.basic.period": "/ mo · Free forever",
+      "pricing.basic.cta": "Choose plan",
+      "pricing.basic.li1": "<span class=\"check\">✓</span> 1 user",
+      "pricing.basic.li2": "<span class=\"check\">✓</span> Up to 100 products",
+      "pricing.basic.li3": "<span class=\"check\">✓</span> Inventory in/out",
+      "pricing.basic.li4": "<span class=\"check\">✓</span> Current stock report",
+      "pricing.basic.li5": "<span class=\"check\">✓</span> Stock & expiry alerts",
+      "pricing.basic.li6": "<span class=\"cross\">✗</span> AI vision with YOLO",
+      "pricing.basic.li7": "<span class=\"cross\">✗</span> Foot traffic analytics",
+      "pricing.basic.li8": "<span class=\"cross\">✗</span> Advanced roles & permissions",
+      "pricing.basic.li9": "<span class=\"cross\">✗</span> Priority WhatsApp support",
+      "pricing.entre.name": "Entrepreneur",
+      "pricing.entre.period.monthly": "/ mo · <s style=\"color:var(--text3)\">S/588/yr</s>",
+      "pricing.entre.period.annual": "/ mo · <s style=\"color:var(--text3)\">S/470/yr</s>",
+      "pricing.entre.cta": "Start 14-day trial",
+      "pricing.entre.li1": "<span class=\"check\">✓</span> 1 user",
+      "pricing.entre.li2": "<span class=\"check\">✓</span> Up to 500 products",
+      "pricing.entre.li3": "<span class=\"check\">✓</span> Inventory in/out",
+      "pricing.entre.li4": "<span class=\"check\">✓</span> Current stock report",
+      "pricing.entre.li5": "<span class=\"check\">✓</span> Stock & expiry alerts",
+      "pricing.entre.li6": "<span class=\"check\">✓</span> Bundles & kits",
+      "pricing.entre.li7": "<span class=\"check\" style=\"color:var(--cyan)\">✓</span> YOLO vision (basic)",
+      "pricing.entre.li8": "<span class=\"check\" style=\"color:var(--cyan)\">✓</span> Foot traffic analytics",
+      "pricing.entre.li9": "<span class=\"cross\">✗</span> Priority WhatsApp support",
+      "pricing.biz.name": "Business",
+      "pricing.biz.period.monthly": "/ mo · <s style=\"color:var(--text3)\">S/2,388/yr</s>",
+      "pricing.biz.period.annual": "/ mo · <s style=\"color:var(--text3)\">S/1,908/yr</s>",
+      "pricing.biz.cta": "Contact sales",
+      "pricing.biz.li1": "<span class=\"check\">✓</span> 5+ users included",
+      "pricing.biz.li2": "<span class=\"check\">✓</span> Unlimited products",
+      "pricing.biz.li3": "<span class=\"check\">✓</span> Multiple warehouses",
+      "pricing.biz.li4": "<span class=\"check\">✓</span> Advanced reports",
+      "pricing.biz.li5": "<span class=\"check\">✓</span> Advanced roles & permissions",
+      "pricing.biz.li6": "<span class=\"check\" style=\"color:var(--cyan)\">✓</span> Advanced YOLO (multi-camera)",
+      "pricing.biz.li7": "<span class=\"check\" style=\"color:var(--cyan)\">✓</span> Full foot traffic analytics",
+      "pricing.biz.li8": "<span class=\"check\">✓</span> Priority WhatsApp support",
+      "pricing.biz.li9": "<span class=\"check\">✓</span> API & integrations",
+
+      "faq.title": "Questions?",
+      "faq.sub": "Here are the answers to the most common ones.",
+      "faq.q1": "Do I need a credit card to start?",
+      "faq.a1": "No. Our Basic plan is free forever and you can try the Entrepreneur plan for 14 days at no cost. Just sign up with your email to get started.",
+      "faq.q2": "How does YOLO technology work in my store?",
+      "faq.a2": "FlowTrack uses Ultralytics YOLO, a state-of-the-art computer vision model. Connect a compatible camera (webcam or IP). The system detects and counts products during receiving. You validate before saving—so you always stay in control.",
+      "faq.q3": "Do I need special equipment for foot traffic analytics?",
+      "faq.a3": "No. FlowTrack works with standard security cameras or webcams placed at your entrance. We process the footage and deliver visitor counts, peak hours, and conversion rates in your dashboard.",
+      "faq.q4": "What happens after the 14-day free trial?",
+      "faq.a4": "After 14 days, you can stay on the free Basic plan or subscribe to a paid plan. No commitments—cancel anytime.",
+      "faq.q5": "Can I change plans anytime?",
+      "faq.a5": "Yes. Upgrade or downgrade anytime from your dashboard. Changes apply immediately and billing is prorated.",
+      "faq.q6": "Is FlowTrack built for Peruvian bodegas?",
+      "faq.a6": "Yes. FlowTrack is designed for traditional retail: bodegas, mini-markets, and entrepreneurs. Our goal is simple adoption—low friction and accessible from day one.",
+
+      "footer.tagline": "Making inventory simple for small stores across Latin America.",
+      "footer.copy": "© 2026 FlowTrack · Made in Peru",
+
+      "testimonials.title": "What our users say",
+      "testimonials.1.name": "Rosa Quispe",
+      "testimonials.1.role": "Store owner",
+      "testimonials.1.quote": "“With FlowTrack I no longer run out of key products. Stock alerts give me time to restock with confidence.”",
+      "testimonials.2.name": "Carlos Méndez",
+      "testimonials.2.role": "Mini-market manager",
+      "testimonials.2.quote": "“We used to end the day full of doubts. Now I see inflows, outflows, and expiring products in one dashboard.”",
+      "testimonials.3.name": "Sofía Rivas",
+      "testimonials.3.role": "Warehouse lead",
+      "testimonials.3.quote": "“My favorite part is expiration tracking. We reduced losses and always know which batches to move first.”",
+    },
+  };
+
+  function setLanguage(lang) {
+    const next = lang === "en" ? "en" : "es";
+    const dict = I18N[next];
+    document.documentElement.lang = next;
+    localStorage.setItem("lang", next);
+
+    // Update any element with data-i18n.
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      const key = el.getAttribute("data-i18n");
+      if (!key || !dict[key]) return;
+      el.innerHTML = dict[key];
+    });
+
+    // Update navbar link/button text (to keep it simple & safe).
+    const nav = document.querySelector("nav");
+    if (nav) {
+      const linkMap = {
+        "#caracteristicas": "nav.features",
+        "#yolo": "nav.yolo",
+        "#afluencia": "nav.flow",
+        "#producto": "nav.product",
+        "#equipo": "nav.team",
+        "#planes": "nav.plans",
+        "#faq": "nav.faq",
+      };
+      nav.querySelectorAll(".nav-links a").forEach((a) => {
+        const href = a.getAttribute("href") || "";
+        const k = linkMap[href];
+        if (k && dict[k]) a.textContent = dict[k];
+      });
+      const login = nav.querySelector(".nav-cta a.btn-ghost");
+      if (login && dict["nav.login"]) login.textContent = dict["nav.login"];
+      const trial = nav.querySelector(".nav-cta a.btn-primary");
+      if (trial && dict["nav.try"]) trial.textContent = dict["nav.try"];
+    }
+
+    const toggle = document.getElementById("lang-toggle");
+    if (toggle) toggle.textContent = next.toUpperCase();
+
+    // Keep pricing period labels consistent with selected billing
+    if (typeof window.__pricingMode === "string") {
+      setPricing(window.__pricingMode, document.querySelector(`.toggle-btn${window.__pricingMode === "annual" ? ":nth-child(2)" : ":nth-child(1)"}`) || document.querySelector(".toggle-btn"));
+    }
+  }
+
+  (function initLanguage() {
+    const saved = localStorage.getItem("lang");
+    const browserPrefIsEn = (navigator.language || "").toLowerCase().startsWith("en");
+    const initial = saved || (browserPrefIsEn ? "en" : "es");
+    setLanguage(initial);
+    const toggle = document.getElementById("lang-toggle");
+    if (toggle) {
+      toggle.addEventListener("click", () => {
+        const current = document.documentElement.lang || "es";
+        setLanguage(current === "es" ? "en" : "es");
+      });
+    }
+  })();
+
+  // Ensure toggle pill matches current pricing mode on load
+  (function initPricingPill() {
+    const wrap = document.querySelector(".toggle-wrap");
+    if (!wrap) return;
+    wrap.setAttribute("data-mode", window.__pricingMode || "monthly");
+  })();
+
+  // Scroll reveal
+  (function initReveal() {
+    const els = Array.from(document.querySelectorAll(".reveal"));
+    if (!("IntersectionObserver" in window) || els.length === 0) {
+      els.forEach((el) => el.classList.add("in"));
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("in");
+          io.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -10% 0px" }
+    );
+    els.forEach((el, idx) => {
+      // Small stagger without layout thrash
+      el.style.transitionDelay = `${Math.min(220, idx * 45)}ms`;
+      io.observe(el);
+    });
+  })();
+
+  // Toast tap feedback (wireframe hero)
+  (function initWireframeToasts() {
+    const toasts = Array.from(document.querySelectorAll(".wf-toast"));
+    if (toasts.length === 0) return;
+    toasts.forEach((t) => {
+      t.addEventListener("pointerdown", () => {
+        t.classList.remove("is-tapped");
+        // restart animation reliably
+        void t.offsetWidth;
+        t.classList.add("is-tapped");
+      });
+      t.addEventListener("animationend", () => t.classList.remove("is-tapped"));
+    });
+  })();
+
+  function toggleFaq(el) {
+    const item = el.parentElement;
+    item.classList.toggle('open');
+  }
+
+  function setPricing(type, btn) {
+    window.__pricingMode = type;
+    document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const wrap = document.querySelector(".toggle-wrap");
+    if (wrap) wrap.setAttribute("data-mode", type);
+    const lang = document.documentElement.lang === "en" ? "en" : "es";
+    const dict = I18N[lang];
+    if (type === 'annual') {
+      document.getElementById('price-emp').textContent = '39';
+      document.getElementById('period-emp').innerHTML = dict["pricing.entre.period.annual"] || '/ mes · <s style="color:var(--text3)">S/470/año</s>';
+      document.getElementById('price-emp2').textContent = '159';
+      document.getElementById('period-emp2').innerHTML = dict["pricing.biz.period.annual"] || '/ mes · <s style="color:var(--text3)">S/1,908/año</s>';
+    } else {
+      document.getElementById('price-emp').textContent = '49';
+      document.getElementById('period-emp').innerHTML = dict["pricing.entre.period.monthly"] || '/ mes · <s style="color:var(--text3)">S/588/año</s>';
+      document.getElementById('price-emp2').textContent = '199';
+      document.getElementById('period-emp2').innerHTML = dict["pricing.biz.period.monthly"] || '/ mes · <s style="color:var(--text3)">S/2,388/año</s>';
+    }
+  }
+</script>
+</body>
+</html>
